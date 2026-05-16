@@ -28,6 +28,12 @@ export const config = {
       process.env.GITHUB_CALLBACK_URL ||
       `http://localhost:${port}/api/auth/github/callback`,
   },
+  watsonx: {
+    apiKey: process.env.WATSONX_API_KEY || '',
+    projectId: process.env.WATSONX_PROJECT_ID || '',
+    region: process.env.WATSONX_REGION || 'us-south',
+    modelId: process.env.WATSONX_MODEL_ID || 'ibm/granite-13b-chat-v2',
+  },
   isProduction: process.env.NODE_ENV === 'production',
 };
 

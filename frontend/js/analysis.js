@@ -3,6 +3,8 @@
 
 // State management
 let currentRepo = null;
+let currentOwner = null;
+let currentRepoName = null;
 let useAuthenticatedApi = false;
 
 function apiBase() {
@@ -27,6 +29,7 @@ let fileTreeAbort = null;
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
     initializeEventListeners();
+    initializeAnalysisListeners();
     if (typeof Auth !== 'undefined') {
         await Auth.init();
         await refreshAuthMode();
@@ -93,6 +96,171 @@ async function handleAnalyze() {
     }
 
     await fetchRepository(repoInfo.owner, repoInfo.repo);
+}
+
+// Initialize analysis event listeners
+function initializeAnalysisListeners() {
+    const audienceBtns = document.querySelectorAll('.audience-btn');
+    const changeAudienceBtn = document.getElementById('changeAudienceBtn');
+    const exportDocBtn = document.getElementById('exportDocBtn');
+
+    audienceBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const audience = btn.dataset.audience;
+            handleAudienceSelection(audience);
+        });
+    });
+
+    if (changeAudienceBtn) {
+        changeAudienceBtn.addEventListener('click', () => {
+            showAudienceSelector();
+        });
+    }
+
+    if (exportDocBtn) {
+        exportDocBtn.addEventListener('click', () => {
+            exportDocument();
+        });
+    }
+}
+
+// Handle audience selection
+async function handleAudienceSelection(audience) {
+    if (!currentOwner || !currentRepoName) {
+        showError('Please analyze a repository first');
+        return;
+    }
+
+    // Update UI
+    document.querySelectorAll('.audience-btn').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    event.target.closest('.audience-btn').classList.add('selected');
+
+    // Show loading
+    document.getElementById('analysisLoading').style.display = 'flex';
+    document.getElementById('documentDisplay').style.display = 'none';
+
+    try {
+        await refreshAuthMode();
+
+        let response;
+        if (useAuthenticatedApi && typeof Auth !== 'undefined') {
+            response = await Auth.apiFetch('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    owner: currentOwner,
+                    repo: currentRepoName,
+                    audience: audience,
+                }),
+            });
+        } else {
+            response = await fetch(`${apiBase()}/api/analyze/public`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    owner: currentOwner,
+                    repo: currentRepoName,
+                    audience: audience,
+                }),
+            });
+        }
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || `Analysis failed (${response.status})`);
+        }
+
+        const data = await response.json();
+        displayDocument(data.document);
+    } catch (error) {
+        console.error('Analysis error:', error);
+        showError(error.message);
+        document.getElementById('analysisLoading').style.display = 'none';
+    }
+}
+
+// Display generated document
+function displayDocument(doc) {
+    document.getElementById('analysisLoading').style.display = 'none';
+    document.getElementById('documentDisplay').style.display = 'block';
+
+    const titleEl = document.getElementById('documentTitle');
+    const contentEl = document.getElementById('documentContent');
+
+    titleEl.textContent = doc.title;
+
+    let html = '';
+    for (const section of doc.sections) {
+        html += `
+            <div class="document-section">
+                <h3>${escapeHtml(section.heading)}</h3>
+                <div>${formatMarkdown(section.content)}</div>
+            </div>
+        `;
+    }
+
+    contentEl.innerHTML = html;
+
+    // Scroll to document
+    document.getElementById('documentDisplay').scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+    });
+}
+
+// Format markdown-like content to HTML
+function formatMarkdown(text) {
+    let html = escapeHtml(text);
+
+    // Convert **bold** to <strong>
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+    // Convert `code` to <code>
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Convert bullet points
+    html = html.replace(/^• (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+
+    // Convert line breaks to paragraphs
+    const paragraphs = html.split('\n\n');
+    html = paragraphs.map(p => {
+        p = p.trim();
+        if (!p) return '';
+        if (p.startsWith('<ul>') || p.startsWith('<ol>')) return p;
+        return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+    }).join('\n');
+
+    return html;
+}
+
+// Show audience selector
+function showAudienceSelector() {
+    document.getElementById('documentDisplay').style.display = 'none';
+    document.querySelectorAll('.audience-btn').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+}
+
+// Export document
+function exportDocument() {
+    const title = document.getElementById('documentTitle').textContent;
+    const content = document.getElementById('documentContent').innerText;
+
+    const blob = new Blob([`${title}\n${'='.repeat(title.length)}\n\n${content}`], {
+        type: 'text/plain',
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentRepoName}-analysis.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 // Extract owner and repo from various URL formats
@@ -415,8 +583,18 @@ function displayResults(repoData, treeData) {
     hideLoading();
     hideError();
 
+    // Store current repo info for analysis
+    currentOwner = repoData.owner.login;
+    currentRepoName = repoData.name;
+
     const resultsSection = document.getElementById('resultsSection');
     resultsSection.style.display = 'block';
+
+    // Show analysis panel
+    const analysisPanel = document.getElementById('analysisPanel');
+    if (analysisPanel) {
+        analysisPanel.style.display = 'block';
+    }
 
     document.getElementById('repoName').textContent = repoData.full_name;
     document.getElementById('repoLink').href = repoData.html_url;

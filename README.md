@@ -28,6 +28,14 @@ RepoTalk is an AI-powered repository interpreter that transforms GitHub reposito
   - File type icons (emojis)
   - Expandable structure
   - File count
+- **🆕 Repository Analysis & AI-Powered Document Generation**:
+  - Intelligent analysis of repository structure and content
+  - Technology and framework detection
+  - Architecture pattern identification
+  - **IBM watsonx.ai Runtime / WML integration** for AI-powered document generation
+  - Audience-specific document generation for 7 different personas
+  - Automatic fallback to template-based generation
+  - Export analysis as text file
 
 ### Design Features
 - **Modern Dark Theme**: Sophisticated dark UI with purple/blue gradients
@@ -41,12 +49,15 @@ RepoTalk is an AI-powered repository interpreter that transforms GitHub reposito
 ### Prerequisites
 - Node.js 18+ (for the backend server and GitHub OAuth)
 - Modern web browser
-- A [GitHub OAuth App](https://github.com/settings/developers) for “Connect GitHub” (optional for public URL-only analysis)
+- A [GitHub OAuth App](https://github.com/settings/developers) for "Connect GitHub" (optional for public URL-only analysis)
+- **IBM Cloud Account** and **watsonx.ai credentials** for AI-powered document generation (optional - falls back to templates)
 
 ### Installation
 
 1. Clone the repository
-2. Copy `.env.example` to `.env` and set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
+2. Copy `.env.example` to `.env` and configure:
+   - **Required for GitHub OAuth:** `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
+   - **Optional for AI generation:** `WATSONX_API_KEY`, `WATSONX_PROJECT_ID`, `WATSONX_REGION`
 3. In GitHub OAuth app settings, set callback URL to `http://localhost:3000/api/auth/github/callback`
 4. Start the server:
 
@@ -59,6 +70,8 @@ npm run dev
 5. Open [http://localhost:3000/analysis.html](http://localhost:3000/analysis.html)
 
 **Public repos only (no OAuth):** you can still open `frontend/analysis.html` via a static server; analysis uses the public GitHub API from the browser (lower rate limits, no private repos).
+
+**AI-powered generation:** See [WATSONX_INTEGRATION.md](WATSONX_INTEGRATION.md) for detailed setup instructions for IBM watsonx.ai.
 
 ### Usage
 
@@ -165,13 +178,23 @@ The dashboard is fully responsive with breakpoints at:
 
 ## 🎯 Target Audiences
 
-The dashboard supports analysis tailored for:
-1. **CEOs** - High-level business insights
-2. **Product Managers** - Feature and roadmap analysis
-3. **Designers** - UI/UX and design system insights
-4. **Engineers** - Technical architecture details
-5. **Beginners** - Simplified explanations
-6. **Investors** - Business value and metrics
+RepoTalk generates tailored documentation for:
+1. **👔 CEO / C-Level** - Business overview, strategic value, and ROI
+2. **📊 Product Manager** - Features, market analysis, and roadmap insights
+3. **⚙️ Engineering Manager** - Technical stack, practices, and team metrics
+4. **💻 Software Engineer** - Code structure, setup, and development workflow
+5. **🎨 Designer** - UI/UX components, design system, and assets
+6. **🎓 Beginner / Intern** - Simple explanations and learning resources
+7. **💰 Investor** - Market validation, risk assessment, and investment thesis
+
+### How to Use Analysis Feature
+
+1. **Analyze a repository** - Enter a GitHub URL and click "Analyze Repository"
+2. **Select your audience** - Choose from 7 different personas
+3. **View generated document** - Get tailored insights and explanations
+4. **Export analysis** - Download as text file for sharing
+
+See [ANALYSIS_FEATURE.md](ANALYSIS_FEATURE.md) for detailed documentation.
 
 ## 🔧 Customization
 
@@ -204,12 +227,15 @@ Add a new stat card in `frontend/index.html`:
 
 - [x] Backend integration
 - [x] GitHub OAuth login
+- [x] Repository analysis and document generation
+- [x] **AI-powered analysis using IBM watsonx.ai Runtime / WML**
 - [ ] Persistent session store (Redis) for production
-- [ ] Advanced search functionality
-- [ ] Export reports feature
+- [ ] PDF export with AI-generated styling
+- [ ] Repository comparison
 - [ ] Team collaboration tools
 - [ ] Dark/Light theme toggle
 - [ ] Customizable dashboard layouts
+- [ ] Streaming AI responses for real-time generation
 
 ## 📄 License
 

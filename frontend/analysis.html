@@ -160,6 +160,87 @@
                         <div class="meta-item" id="repoLanguage"></div>
                         <div class="meta-item" id="repoLicense"></div>
                         <div class="meta-item" id="repoUpdated"></div>
+                </div>
+
+                <!-- Analysis Panel -->
+                <div class="analysis-panel" id="analysisPanel" style="display: none;">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 12H15M9 16H15M17 21H7C5.89543 21 5 20.1046 5 19V5C5 3.89543 5.89543 3 7 3H12.5858C12.851 3 13.1054 3.10536 13.2929 3.29289L18.7071 8.70711C18.8946 8.89464 19 9.149 19 9.41421V19C19 20.1046 18.1046 21 17 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Repository Analysis
+                        </h3>
+                    </div>
+                    
+                    <div class="audience-selector">
+                        <label class="audience-label">Select your audience:</label>
+                        <div class="audience-grid">
+                            <button class="audience-btn" data-audience="ceo">
+                                <span class="audience-icon">👔</span>
+                                <span class="audience-name">CEO / C-Level</span>
+                                <span class="audience-desc">Business overview & strategic value</span>
+                            </button>
+                            <button class="audience-btn" data-audience="product_manager">
+                                <span class="audience-icon">📊</span>
+                                <span class="audience-name">Product Manager</span>
+                                <span class="audience-desc">Features & market analysis</span>
+                            </button>
+                            <button class="audience-btn" data-audience="engineering_manager">
+                                <span class="audience-icon">⚙️</span>
+                                <span class="audience-name">Engineering Manager</span>
+                                <span class="audience-desc">Technical stack & practices</span>
+                            </button>
+                            <button class="audience-btn" data-audience="software_engineer">
+                                <span class="audience-icon">💻</span>
+                                <span class="audience-name">Software Engineer</span>
+                                <span class="audience-desc">Code structure & setup</span>
+                            </button>
+                            <button class="audience-btn" data-audience="designer">
+                                <span class="audience-icon">🎨</span>
+                                <span class="audience-name">Designer</span>
+                                <span class="audience-desc">UI/UX & design system</span>
+                            </button>
+                            <button class="audience-btn" data-audience="beginner">
+                                <span class="audience-icon">🎓</span>
+                                <span class="audience-name">Beginner / Intern</span>
+                                <span class="audience-desc">Simple explanations</span>
+                            </button>
+                            <button class="audience-btn" data-audience="investor">
+                                <span class="audience-icon">💰</span>
+                                <span class="audience-name">Investor</span>
+                                <span class="audience-desc">Market validation & ROI</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Analysis Loading -->
+                    <div id="analysisLoading" class="analysis-loading" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <p class="loading-text">Analyzing repository and generating document...</p>
+                    </div>
+
+                    <!-- Document Display -->
+                    <div id="documentDisplay" class="document-display" style="display: none;">
+                        <div class="document-header">
+                            <h2 id="documentTitle" class="document-title"></h2>
+                            <button id="exportDocBtn" class="btn-secondary btn-sm">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+                                    <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M7 10L12 15M12 15L17 10M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Export
+                            </button>
+                        </div>
+                        <div id="documentContent" class="document-content"></div>
+                        <div class="document-footer">
+                            <button id="changeAudienceBtn" class="btn-secondary">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+                                    <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Change Audience
+                            </button>
+                        </div>
                     </div>
                 </div>
 

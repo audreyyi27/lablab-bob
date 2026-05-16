@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { config } from './config.js';
 import authRouter from './routes/auth.js';
 import githubRouter from './routes/github.js';
+import analyzeRouter from './routes/analyze.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const frontendRoot = path.join(__dirname, '../../frontend');
@@ -28,8 +29,11 @@ app.use(
   })
 );
 
+app.use(express.json());
+
 app.use('/api/auth', authRouter);
 app.use('/api/github', githubRouter);
+app.use('/api/analyze', analyzeRouter);
 
 app.use(express.static(frontendRoot));
 
