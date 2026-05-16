@@ -1682,6 +1682,7 @@ html {
     background: var(--border-color);
 }
 
+<<<<<<< HEAD
 /* Analysis Panel Styles */
 .analysis-panel {
     background: rgba(26, 26, 36, 0.6);
@@ -1859,3 +1860,298 @@ html {
     padding: 8px 16px;
     font-size: 14px;
 }
+=======
+/* ============================================
+   DEPLOYMENT PANEL STYLES (Engineer Role)
+   ============================================ */
+
+.deployment-panel {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    animation: slideUp 0.5s ease-out;
+}
+
+.deployment-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.deployment-info {
+    padding: 16px;
+    background: rgba(139, 92, 246, 0.05);
+    border-radius: 8px;
+    border-left: 3px solid var(--purple-500);
+}
+
+.deployment-description {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.deployment-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.deployment-actions button {
+    flex: 1;
+    min-width: 150px;
+}
+
+/* Deployment Analysis */
+.deployment-analysis {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(59, 130, 246, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.analysis-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+}
+
+.analysis-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.analysis-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.analysis-label {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.analysis-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.analysis-recommendations,
+.analysis-risks {
+    margin-top: 16px;
+}
+
+.analysis-recommendations h5,
+.analysis-risks h5 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.analysis-recommendations ul,
+.analysis-risks ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.analysis-recommendations li,
+.analysis-risks li {
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.risk-list li {
+    border-left: 3px solid var(--orange-500);
+}
+
+/* Active Deployments */
+.active-deployments,
+.deployment-history {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(26, 26, 36, 0.4);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.deployments-title,
+.history-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+}
+
+.deployments-list,
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.deployment-card,
+.history-item {
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.deployment-card:hover,
+.history-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--border-hover);
+}
+
+.deployment-header,
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.deployment-id,
+.history-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+.deployment-status,
+.history-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-blue {
+    background: rgba(59, 130, 246, 0.2);
+    color: var(--blue-400);
+}
+
+.status-yellow {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--orange-400);
+}
+
+.status-green {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--green-400);
+}
+
+.status-red {
+    background: rgba(239, 68, 68, 0.2);
+    color: #F87171;
+}
+
+.status-gray {
+    background: rgba(107, 107, 138, 0.2);
+    color: var(--text-tertiary);
+}
+
+.deployment-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.deployment-detail {
+    display: flex;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.detail-label {
+    color: var(--text-tertiary);
+    min-width: 100px;
+}
+
+.detail-value {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.deployment-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.history-details {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* Success Notification */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 16px 24px;
+    background: rgba(16, 185, 129, 0.9);
+    color: white;
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    z-index: 10000;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.notification.success {
+    background: rgba(16, 185, 129, 0.9);
+}
+
+.notification.error {
+    background: rgba(239, 68, 68, 0.9);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive Design for Deployment Panel */
+@media (max-width: 768px) {
+    .deployment-actions {
+        flex-direction: column;
+    }
+    
+    .deployment-actions button {
+        width: 100%;
+    }
+    
+    .analysis-content {
+        grid-template-columns: 1fr;
+    }
+}
+>>>>>>> 30845ee (Watsonz Orchestrate CD)

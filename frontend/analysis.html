@@ -244,6 +244,77 @@
                     </div>
                 </div>
 
+                <!-- Deployment Control Panel (Engineer Role) -->
+                <div class="deployment-panel" id="deploymentPanel" style="display: none;">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Continuous Delivery (Engineer)
+                        </h3>
+                        <span class="ai-badge">
+                            <span class="ai-pulse"></span>
+                            AI-Powered
+                        </span>
+                    </div>
+                    
+                    <div class="deployment-controls">
+                        <div class="deployment-info">
+                            <p class="deployment-description">AI-powered continuous delivery using Watsonx Orchestrate. Analyze, trigger, and monitor deployments automatically.</p>
+                        </div>
+                        
+                        <div class="deployment-actions">
+                            <button id="analyzeDeploymentBtn" class="btn-secondary">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15M9 5C9 6.10457 9.89543 7 11 7H13C14.1046 7 15 6.10457 15 5M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5M12 12H15M12 16H15M9 12H9.01M9 16H9.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                AI Analysis
+                            </button>
+                            <button id="triggerDeploymentBtn" class="btn-primary">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M13 10V3L4 14H11L11 21L20 10L13 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Deploy Now
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Deployment Analysis Results -->
+                    <div id="deploymentAnalysis" class="deployment-analysis" style="display: none;">
+                        <h4 class="analysis-title">AI Deployment Analysis</h4>
+                        <div class="analysis-content">
+                            <div class="analysis-item">
+                                <span class="analysis-label">Readiness:</span>
+                                <span id="analysisReadiness" class="analysis-value"></span>
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-label">Confidence:</span>
+                                <span id="analysisConfidence" class="analysis-value"></span>
+                            </div>
+                            <div class="analysis-item">
+                                <span class="analysis-label">Est. Duration:</span>
+                                <span id="analysisDuration" class="analysis-value"></span>
+                            </div>
+                        </div>
+                        <div id="analysisRecommendations" class="analysis-recommendations"></div>
+                        <div id="analysisRisks" class="analysis-risks"></div>
+                    </div>
+
+                    <!-- Active Deployments -->
+                    <div id="activeDeployments" class="active-deployments" style="display: none;">
+                        <h4 class="deployments-title">Active Deployments</h4>
+                        <div id="deploymentsList" class="deployments-list"></div>
+                    </div>
+
+                    <!-- Deployment History -->
+                    <div id="deploymentHistory" class="deployment-history" style="display: none;">
+                        <h4 class="history-title">Recent Deployments</h4>
+                        <div id="historyList" class="history-list"></div>
+                    </div>
+                </div>
+
                 <!-- File Structure Card -->
                 <div class="file-structure-card">
                     <div class="card-header">
@@ -296,6 +367,7 @@
     
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/deployment.js"></script>
     <script src="js/analysis.js"></script>
 </body>
 </html>

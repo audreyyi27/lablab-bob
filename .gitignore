@@ -8,5 +8,6 @@ venv/
 __pycache__/
 .pytest_cache/
 backend/venv/
-.venv/
-backend/.venv/
+.venv/*
+.env*
+backend/node_modules

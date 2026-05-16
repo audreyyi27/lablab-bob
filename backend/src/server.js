@@ -6,7 +6,11 @@ import { config } from './config.js';
 import { isWatsonxConfigured } from './watsonx.js';
 import authRouter from './routes/auth.js';
 import githubRouter from './routes/github.js';
+<<<<<<< HEAD
 import analyzeRouter from './routes/analyze.js';
+=======
+import deploymentRouter from './routes/deployment.js';
+>>>>>>> 30845ee (Watsonz Orchestrate CD)
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const frontendRoot = path.join(__dirname, '../../frontend');
@@ -34,7 +38,11 @@ app.use(express.json());
 
 app.use('/api/auth', authRouter);
 app.use('/api/github', githubRouter);
+<<<<<<< HEAD
 app.use('/api/analyze', analyzeRouter);
+=======
+app.use('/api/deployment', deploymentRouter);
+>>>>>>> 30845ee (Watsonz Orchestrate CD)
 
 app.use(express.static(frontendRoot));
 

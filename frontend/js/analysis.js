@@ -469,6 +469,335 @@ function handleFileTreeClick(e) {
         return;
     }
 
+    const folderRow = e.target.closest('.tree-item.folder');
+    if (folderRow) {
+        e.preventDefault();
+        toggleFolder(folderRow);
+    }
+}
+
+// ============================================
+// DEPLOYMENT INTEGRATION (Engineer Role)
+// ============================================
+
+let currentRepoForDeployment = null;
+
+/**
+ * Initialize deployment controls when repository is loaded
+ */
+function initializeDeploymentControls(owner, repo) {
+    currentRepoForDeployment = { owner, repo };
+    
+    const deploymentPanel = document.getElementById('deploymentPanel');
+    if (deploymentPanel) {
+        deploymentPanel.style.display = 'block';
+    }
+
+    // Set up event listeners
+    const analyzeBtn = document.getElementById('analyzeDeploymentBtn');
+    const triggerBtn = document.getElementById('triggerDeploymentBtn');
+
+    if (analyzeBtn) {
+        analyzeBtn.onclick = () => handleDeploymentAnalysis(owner, repo);
+    }
+
+    if (triggerBtn) {
+        triggerBtn.onclick = () => handleDeploymentTrigger(owner, repo);
+    }
+
+    // Load deployment history
+    loadDeploymentHistory(owner, repo);
+
+    // Listen for deployment status updates
+    window.addEventListener('deploymentStatusUpdate', handleDeploymentStatusUpdate);
+}
+
+/**
+ * Handle AI deployment analysis
+ */
+async function handleDeploymentAnalysis(owner, repo) {
+    const analysisSection = document.getElementById('deploymentAnalysis');
+    const analyzeBtn = document.getElementById('analyzeDeploymentBtn');
+    
+    try {
+        analyzeBtn.disabled = true;
+        analyzeBtn.innerHTML = `
+            <div class="loading-spinner" style="width: 16px; height: 16px;"></div>
+            Analyzing...
+        `;
+
+        const analysis = await window.deploymentManager.analyzeDeployment(owner, repo);
+
+        // Display analysis results
+        document.getElementById('analysisReadiness').textContent = 
+            analysis.ready ? '✅ Ready' : '⚠️ Not Ready';
+        document.getElementById('analysisConfidence').textContent = 
+            `${Math.round(analysis.confidence * 100)}%`;
+        document.getElementById('analysisDuration').textContent = 
+            analysis.estimatedDuration;
+
+        // Show recommendations
+        const recommendationsEl = document.getElementById('analysisRecommendations');
+        if (analysis.recommendations && analysis.recommendations.length > 0) {
+            recommendationsEl.innerHTML = `
+                <h5>Recommendations:</h5>
+                <ul>
+                    ${analysis.recommendations.map(r => `<li>${escapeHtml(r)}</li>`).join('')}
+                </ul>
+            `;
+        } else {
+            recommendationsEl.innerHTML = '';
+        }
+
+        // Show risks
+        const risksEl = document.getElementById('analysisRisks');
+        if (analysis.risks && analysis.risks.length > 0) {
+            risksEl.innerHTML = `
+                <h5>Potential Risks:</h5>
+                <ul class="risk-list">
+                    ${analysis.risks.map(r => `<li>⚠️ ${escapeHtml(r)}</li>`).join('')}
+                </ul>
+            `;
+        } else {
+            risksEl.innerHTML = '';
+        }
+
+        analysisSection.style.display = 'block';
+
+    } catch (error) {
+        showError('Failed to analyze deployment: ' + error.message);
+    } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15M9 5C9 6.10457 9.89543 7 11 7H13C14.1046 7 15 6.10457 15 5M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5M12 12H15M12 16H15M9 12H9.01M9 16H9.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            AI Analysis
+        `;
+    }
+}
+
+/**
+ * Handle deployment trigger
+ */
+async function handleDeploymentTrigger(owner, repo) {
+    const triggerBtn = document.getElementById('triggerDeploymentBtn');
+    
+    if (!confirm(`Deploy ${owner}/${repo} to production?\n\nThis will trigger an automated deployment via Watsonx Orchestrate.`)) {
+        return;
+    }
+
+    try {
+        triggerBtn.disabled = true;
+        triggerBtn.innerHTML = `
+            <div class="loading-spinner" style="width: 16px; height: 16px;"></div>
+            Deploying...
+        `;
+
+        const deployment = await window.deploymentManager.triggerDeployment(owner, repo, {
+            environment: 'production',
+            deploymentType: 'manual'
+        });
+
+        // Show active deployment
+        showActiveDeployment(deployment);
+
+        showSuccess(`Deployment initiated! ID: ${deployment.id}`);
+
+    } catch (error) {
+        showError('Failed to trigger deployment: ' + error.message);
+    } finally {
+        triggerBtn.disabled = false;
+        triggerBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 10V3L4 14H11L11 21L20 10L13 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Deploy Now
+        `;
+    }
+}
+
+/**
+ * Show active deployment
+ */
+function showActiveDeployment(deployment) {
+    const activeSection = document.getElementById('activeDeployments');
+    const deploymentsList = document.getElementById('deploymentsList');
+
+    const statusInfo = window.deploymentManager.formatStatus(deployment.status);
+
+    const deploymentCard = document.createElement('div');
+    deploymentCard.className = 'deployment-card';
+    deploymentCard.id = `deployment-${deployment.id}`;
+    deploymentCard.innerHTML = `
+        <div class="deployment-header">
+            <span class="deployment-id">#${deployment.id.substring(0, 8)}</span>
+            <span class="deployment-status status-${statusInfo.color}">
+                ${statusInfo.icon} ${statusInfo.text}
+            </span>
+        </div>
+        <div class="deployment-info">
+            <div class="deployment-detail">
+                <span class="detail-label">Branch:</span>
+                <span class="detail-value">${escapeHtml(deployment.branch)}</span>
+            </div>
+            <div class="deployment-detail">
+                <span class="detail-label">Environment:</span>
+                <span class="detail-value">${escapeHtml(deployment.environment)}</span>
+            </div>
+            <div class="deployment-detail">
+                <span class="detail-label">Triggered:</span>
+                <span class="detail-value">${formatRelativeTime(deployment.triggeredAt)}</span>
+            </div>
+        </div>
+        <div class="deployment-actions">
+            <button class="btn-secondary btn-sm" onclick="cancelDeployment('${deployment.id}')">
+                Cancel
+            </button>
+        </div>
+    `;
+
+    deploymentsList.insertBefore(deploymentCard, deploymentsList.firstChild);
+    activeSection.style.display = 'block';
+}
+
+/**
+ * Handle deployment status updates
+ */
+function handleDeploymentStatusUpdate(event) {
+    const { executionId, status } = event.detail;
+    const deploymentCard = document.getElementById(`deployment-${executionId}`);
+    
+    if (!deploymentCard) return;
+
+    const statusInfo = window.deploymentManager.formatStatus(status.status);
+    const statusEl = deploymentCard.querySelector('.deployment-status');
+    
+    if (statusEl) {
+        statusEl.className = `deployment-status status-${statusInfo.color}`;
+        statusEl.textContent = `${statusInfo.icon} ${statusInfo.text}`;
+    }
+
+    // If completed, move to history
+    if (status.status === 'completed' || status.status === 'failed' || status.status === 'cancelled') {
+        setTimeout(() => {
+            deploymentCard.remove();
+            if (currentRepoForDeployment) {
+                loadDeploymentHistory(currentRepoForDeployment.owner, currentRepoForDeployment.repo);
+            }
+        }, 3000);
+    }
+}
+
+/**
+ * Load deployment history
+ */
+async function loadDeploymentHistory(owner, repo) {
+    try {
+        const deployments = await window.deploymentManager.listDeployments(owner, repo, 5);
+        
+        if (deployments.length === 0) return;
+
+        const historySection = document.getElementById('deploymentHistory');
+        const historyList = document.getElementById('historyList');
+
+        historyList.innerHTML = deployments.map(d => {
+            const statusInfo = window.deploymentManager.formatStatus(d.status);
+            const startTime = d.parameters?.timestamp || d.started_at;
+            
+            return `
+                <div class="history-item">
+                    <div class="history-header">
+                        <span class="history-id">#${d.execution_id?.substring(0, 8) || 'N/A'}</span>
+                        <span class="history-status status-${statusInfo.color}">
+                            ${statusInfo.icon} ${statusInfo.text}
+                        </span>
+                    </div>
+                    <div class="history-details">
+                        <span>${escapeHtml(d.parameters?.branch || 'main')}</span>
+                        <span>→</span>
+                        <span>${escapeHtml(d.parameters?.environment || 'production')}</span>
+                        <span>•</span>
+                        <span>${formatRelativeTime(startTime)}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        historySection.style.display = 'block';
+
+    } catch (error) {
+        console.error('Failed to load deployment history:', error);
+    }
+}
+
+/**
+ * Cancel a deployment
+ */
+window.cancelDeployment = async function(executionId) {
+    if (!confirm('Cancel this deployment?')) return;
+
+    try {
+        await window.deploymentManager.cancelDeployment(executionId);
+        showSuccess('Deployment cancelled');
+    } catch (error) {
+        showError('Failed to cancel deployment: ' + error.message);
+    }
+};
+
+/**
+ * Show success message
+ */
+function showSuccess(message) {
+    // Create a temporary success notification
+    const notification = document.createElement('div');
+    notification.className = 'notification success';
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => notification.remove(), 3000);
+}
+
+/**
+ * Format relative time
+ */
+function formatRelativeTime(timestamp) {
+    if (!timestamp) return 'N/A';
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ============================================
+// END DEPLOYMENT INTEGRATION
+// ============================================
+
+function handleFileTreeClick(e) {
+    const fileRow = e.target.closest('.tree-item.file');
+    if (fileRow && fileRow.dataset.path) {
+        e.preventDefault();
+        markSelectedFile(fileRow);
+        loadFilePreview(fileRow.dataset.path);
+        return;
+    }
+
     const toggle = e.target.closest('.tree-toggle');
     if (toggle && !toggle.classList.contains('tree-toggle-spacer')) {
         e.preventDefault();
@@ -573,6 +902,9 @@ async function fetchRepository(owner, repo) {
         explorerContext = { owner, repo, branch: resolvedBranch };
 
         displayResults(repoData, treeData);
+        
+        // Initialize deployment controls for engineer role
+        initializeDeploymentControls(owner, repo);
     } catch (error) {
         showError(error.message);
     }
