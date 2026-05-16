@@ -39,25 +39,37 @@ RepoTalk is an AI-powered repository interpreter that transforms GitHub reposito
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Modern web browser (Chrome, Firefox, Safari, Edge)
-- Internet connection (to access GitHub API)
-- No build tools or dependencies required
+- Node.js 18+ (for the backend server and GitHub OAuth)
+- Modern web browser
+- A [GitHub OAuth App](https://github.com/settings/developers) for “Connect GitHub” (optional for public URL-only analysis)
 
 ### Installation
 
-1. Clone or download the repository
-2. Open `index.html` in your web browser
-3. That's it! No installation or setup needed.
+1. Clone the repository
+2. Copy `.env.example` to `.env` and set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
+3. In GitHub OAuth app settings, set callback URL to `http://localhost:3000/api/auth/github/callback`
+4. Start the server:
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+5. Open [http://localhost:3000/analysis.html](http://localhost:3000/analysis.html)
+
+**Public repos only (no OAuth):** you can still open `frontend/analysis.html` via a static server; analysis uses the public GitHub API from the browser (lower rate limits, no private repos).
 
 ### Usage
 
-1. **Enter a GitHub URL**: Paste a public GitHub repository URL in the input field
+1. **Connect GitHub (optional):** Click **Connect GitHub**, authorize RepoTalk, then pick a repository from your list (includes private repos you can access)
+2. **Or enter a GitHub URL**: Paste a public GitHub repository URL in the input field
    - Format: `https://github.com/owner/repository`
    - Also accepts: `owner/repository`
 
-2. **Click "Analyze Repository"** or press Enter
+3. **Click "Analyze Repository"** or press Enter
 
-3. **View Results**:
+4. **View Results**:
    - Repository information card with stats
    - Complete file structure tree
 
@@ -70,16 +82,25 @@ https://github.com/torvalds/linux
 https://github.com/nodejs/node
 ```
 
-## 📁 File Structure
+## 📁 Project Structure
 
 ```
 RepoTalk/
-├── index.html      # Landing page with hero section and features
-├── analysis.html   # Repository analysis page with GitHub reader
-├── styles.css      # All styling, animations, and responsive design
-├── script.js       # Landing page interactions and animations
-├── analysis.js     # Repository reader functionality and GitHub API integration
-└── README.md       # Documentation
+├── frontend/
+│   ├── index.html       # Landing page
+│   ├── analysis.html    # Repository analysis UI
+│   ├── css/
+│   │   └── styles.css   # Styles, animations, responsive layout
+│   └── js/
+│       ├── script.js    # Landing page interactions
+│       └── analysis.js  # GitHub API integration and file preview
+├── backend/             # Express API, OAuth, GitHub proxy
+│   ├── src/
+│   └── package.json
+├── .env.example         # GitHub OAuth credentials (copy to .env)
+├── .vscode/
+│   └── launch.json      # Debug: open frontend/index.html
+└── README.md
 ```
 
 ## 🎨 Design System
@@ -97,9 +118,9 @@ RepoTalk/
 ## 🔧 Technical Details
 
 ### GitHub API Integration
-- Uses GitHub REST API v3
-- No authentication required for public repositories
-- Rate limit: 60 requests per hour (unauthenticated)
+- **Without login:** browser calls GitHub REST API directly (60 req/hr unauthenticated)
+- **With OAuth:** backend proxies GitHub API using your token (5,000 req/hr); client secret never leaves the server
+- OAuth scopes: `repo` (read private repos), `read:user`
 - Endpoints used:
   - `/repos/{owner}/{repo}` - Repository information
   - `/repos/{owner}/{repo}/git/trees/{branch}?recursive=1` - File tree
@@ -155,7 +176,7 @@ The dashboard supports analysis tailored for:
 ## 🔧 Customization
 
 ### Changing Colors
-Edit CSS variables in `styles.css`:
+Edit CSS variables in `frontend/css/styles.css`:
 ```css
 :root {
     --purple-500: #8B5CF6;
@@ -165,7 +186,7 @@ Edit CSS variables in `styles.css`:
 ```
 
 ### Adding New Stats
-Add a new stat card in `index.html`:
+Add a new stat card in `frontend/index.html`:
 ```html
 <div class="stat-card">
     <div class="stat-header">
@@ -181,9 +202,9 @@ Add a new stat card in `index.html`:
 
 ## 🚧 Future Enhancements
 
-- [ ] Backend integration
-- [ ] Real GitHub API connection
-- [ ] User authentication
+- [x] Backend integration
+- [x] GitHub OAuth login
+- [ ] Persistent session store (Redis) for production
 - [ ] Advanced search functionality
 - [ ] Export reports feature
 - [ ] Team collaboration tools
