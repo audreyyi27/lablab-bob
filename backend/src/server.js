@@ -3,6 +3,7 @@ import session from 'express-session';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from './config.js';
+import { isWatsonxConfigured } from './watsonx.js';
 import authRouter from './routes/auth.js';
 import githubRouter from './routes/github.js';
 import analyzeRouter from './routes/analyze.js';
@@ -48,5 +49,12 @@ app.listen(config.port, () => {
     console.warn(
       'Warning: GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET not set — Connect GitHub will not work until configured.'
     );
+  }
+  if (!isWatsonxConfigured()) {
+    console.warn(
+      'Warning: WATSONX_API_KEY / WATSONX_PROJECT_ID not set — audience documents require IBM watsonx.ai.'
+    );
+  } else {
+    console.log(`IBM watsonx.ai enabled (model: ${config.watsonx.modelId}, region: ${config.watsonx.region})`);
   }
 });

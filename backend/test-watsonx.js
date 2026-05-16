@@ -52,11 +52,10 @@ console.log();
 console.log('=== Test Summary ===');
 if (isWatsonxConfigured()) {
   console.log('✓ watsonx.ai is configured and ready to use');
-  console.log('  Documents will be generated using IBM watsonx.ai Runtime / WML');
+  console.log('  Documents are generated only via IBM watsonx.ai Runtime / WML');
 } else {
-  console.log('⚠ watsonx.ai is not configured');
-  console.log('  Documents will be generated using built-in templates');
-  console.log('  To enable AI generation, set these environment variables:');
+  console.log('✗ watsonx.ai is not configured — document generation will fail until configured');
+  console.log('  Set these environment variables in .env:');
   console.log('    - WATSONX_API_KEY');
   console.log('    - WATSONX_PROJECT_ID');
   console.log('    - WATSONX_REGION (optional, defaults to us-south)');

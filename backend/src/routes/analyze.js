@@ -2,15 +2,35 @@ import { Router } from 'express';
 import { fetchRepoWithTree } from '../github.js';
 import { analyzeRepository, generateDocument } from '../analyzer.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { isWatsonxConfigured } from '../watsonx.js';
 
 const router = Router();
 
-/**
- * Analyze repository and generate audience-specific document
- * POST /api/analyze
- * Body: { owner, repo, audience }
- */
-router.post('/', requireAuth, async (req, res) => {
+const VALID_AUDIENCES = [
+  'ceo',
+  'product_manager',
+  'engineering_manager',
+  'software_engineer',
+  'designer',
+  'beginner',
+  'investor',
+];
+
+function respondWithError(res, err, { notFoundMessage, rateLimitMessage } = {}) {
+  if (err.status === 404) {
+    return res.status(404).json({ error: notFoundMessage });
+  }
+  if (err.status === 403) {
+    return res.status(403).json({ error: rateLimitMessage });
+  }
+
+  const status = err.status || 500;
+  const payload = { error: err.message || 'Failed to analyze repository' };
+  if (err.details) payload.details = err.details;
+  return res.status(status).json(payload);
+}
+
+async function handleAnalyzeRequest(req, res, accessToken) {
   const { owner, repo, audience } = req.body;
 
   if (!owner || !repo) {
@@ -21,77 +41,75 @@ router.post('/', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Audience is required' });
   }
 
-  const validAudiences = [
-    'ceo',
-    'product_manager',
-    'engineering_manager',
-    'software_engineer',
-    'designer',
-    'beginner',
-    'investor',
-  ];
-
-  if (!validAudiences.includes(audience)) {
+  if (!VALID_AUDIENCES.includes(audience)) {
     return res.status(400).json({
-      error: `Invalid audience. Must be one of: ${validAudiences.join(', ')}`,
+      error: `Invalid audience. Must be one of: ${VALID_AUDIENCES.join(', ')}`,
     });
   }
 
-  try {
-    // Fetch repository data and file tree
-    const { repo: repoData, tree: treeData, branch } = await fetchRepoWithTree(
-      req.session.githubAccessToken,
-      owner,
-      repo
-    );
+  if (!isWatsonxConfigured()) {
+    return res.status(503).json({
+      error:
+        'IBM watsonx.ai is not configured. Set WATSONX_API_KEY and WATSONX_PROJECT_ID in .env, then restart the server.',
+    });
+  }
 
-    if (!treeData || !treeData.tree) {
-      return res.status(400).json({
-        error: 'Could not fetch repository file tree',
-      });
-    }
+  const { repo: repoData, tree: treeData, branch } = await fetchRepoWithTree(
+    accessToken,
+    owner,
+    repo
+  );
 
-    // Analyze repository
-    const analysisData = await analyzeRepository(
-      req.session.githubAccessToken,
+  if (!treeData?.tree) {
+    return res.status(400).json({ error: 'Could not fetch repository file tree' });
+  }
+
+  const analysisData = await analyzeRepository(
+    accessToken,
+    owner,
+    repo,
+    repoData,
+    treeData,
+    branch
+  );
+
+  const document = await generateDocument(audience, analysisData);
+
+  res.json({
+    success: true,
+    analysis: {
+      technologies: analysisData.tech.technologies,
+      frameworks: analysisData.tech.frameworks,
+      tools: analysisData.tech.tools,
+      architecture: analysisData.architecture,
+      importantFiles: analysisData.importantFiles,
+    },
+    document,
+    metadata: {
       owner,
       repo,
-      repoData,
-      treeData,
-      branch
-    );
+      audience,
+      analyzedAt: new Date().toISOString(),
+      generatedBy: document.generatedBy,
+      model: document.model,
+    },
+  });
+}
 
-    // Generate audience-specific document (with AI if configured)
-    const document = await generateDocument(audience, analysisData);
-
-    // Return analysis and document
-    res.json({
-      success: true,
-      analysis: {
-        technologies: analysisData.tech.technologies,
-        frameworks: analysisData.tech.frameworks,
-        tools: analysisData.tech.tools,
-        architecture: analysisData.architecture,
-        importantFiles: analysisData.importantFiles,
-      },
-      document,
-      metadata: {
-        owner,
-        repo,
-        audience,
-        analyzedAt: new Date().toISOString(),
-        generatedBy: document.generatedBy || 'template',
-        model: document.model || 'Built-in templates',
-      },
-    });
+/**
+ * Analyze repository and generate audience-specific document
+ * POST /api/analyze
+ * Body: { owner, repo, audience }
+ */
+router.post('/', requireAuth, async (req, res) => {
+  try {
+    await handleAnalyzeRequest(req, res, req.session.githubAccessToken);
   } catch (err) {
     console.error('Analysis error:', err);
-    const status = err.status === 404 ? 404 : err.status || 500;
-    res.status(status).json({
-      error:
-        status === 404
-          ? 'Repository not found or you do not have access.'
-          : err.message || 'Failed to analyze repository',
+    respondWithError(res, err, {
+      notFoundMessage: 'Repository not found or you do not have access.',
+      rateLimitMessage:
+        'GitHub API rate limit exceeded. Try again later or connect GitHub for higher limits.',
     });
   }
 });
@@ -102,93 +120,16 @@ router.post('/', requireAuth, async (req, res) => {
  * Body: { owner, repo, audience }
  */
 router.post('/public', async (req, res) => {
-  const { owner, repo, audience } = req.body;
-
-  if (!owner || !repo) {
-    return res.status(400).json({ error: 'Owner and repo are required' });
-  }
-
-  if (!audience) {
-    return res.status(400).json({ error: 'Audience is required' });
-  }
-
-  const validAudiences = [
-    'ceo',
-    'product_manager',
-    'engineering_manager',
-    'software_engineer',
-    'designer',
-    'beginner',
-    'investor',
-  ];
-
-  if (!validAudiences.includes(audience)) {
-    return res.status(400).json({
-      error: `Invalid audience. Must be one of: ${validAudiences.join(', ')}`,
-    });
-  }
-
   try {
-    // Fetch repository data and file tree (no auth token)
-    const { repo: repoData, tree: treeData, branch } = await fetchRepoWithTree(
-      null,
-      owner,
-      repo
-    );
-
-    if (!treeData || !treeData.tree) {
-      return res.status(400).json({
-        error: 'Could not fetch repository file tree',
-      });
-    }
-
-    // Analyze repository
-    const analysisData = await analyzeRepository(
-      null,
-      owner,
-      repo,
-      repoData,
-      treeData,
-      branch
-    );
-
-    // Generate audience-specific document (with AI if configured)
-    const document = await generateDocument(audience, analysisData);
-
-    // Return analysis and document
-    res.json({
-      success: true,
-      analysis: {
-        technologies: analysisData.tech.technologies,
-        frameworks: analysisData.tech.frameworks,
-        tools: analysisData.tech.tools,
-        architecture: analysisData.architecture,
-        importantFiles: analysisData.importantFiles,
-      },
-      document,
-      metadata: {
-        owner,
-        repo,
-        audience,
-        analyzedAt: new Date().toISOString(),
-        generatedBy: document.generatedBy || 'template',
-        model: document.model || 'Built-in templates',
-      },
-    });
+    await handleAnalyzeRequest(req, res, null);
   } catch (err) {
     console.error('Public analysis error:', err);
-    const status = err.status === 404 ? 404 : err.status || 500;
-    res.status(status).json({
-      error:
-        status === 404
-          ? 'Repository not found.'
-          : status === 403
-          ? 'GitHub API rate limit exceeded. Try again later or connect GitHub for higher limits.'
-          : err.message || 'Failed to analyze repository',
+    respondWithError(res, err, {
+      notFoundMessage: 'Repository not found.',
+      rateLimitMessage:
+        'GitHub API rate limit exceeded. Try again later or connect GitHub for higher limits.',
     });
   }
 });
 
 export default router;
-
-// Made with Bob
