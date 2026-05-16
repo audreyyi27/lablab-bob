@@ -3,3 +3,10 @@ node_modules/
 backend/.env
 .DS_Store
 *.log
+
+venv/
+__pycache__/
+.pytest_cache/
+backend/venv/
+.venv/*
+.env*
