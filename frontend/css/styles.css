@@ -7,7 +7,7 @@
 
 /* Modal Styles */
 .modal {
-    display: none;
+    display: none !important;
     position: fixed;
     top: 0;
     left: 0;
@@ -15,14 +15,18 @@
     height: 100%;
     z-index: 1000;
     opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
     transition: opacity 0.3s ease;
 }
 
 .modal.active {
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
     opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
 }
 
 .modal-overlay {
@@ -197,6 +201,8 @@
 
 .modal-option:hover .option-arrow {
     opacity: 1;
+    transform: translateX(4px);
+}
 
 /* Modal Sections */
 .modal-section {
@@ -299,9 +305,6 @@
 .btn-sm svg {
     width: 16px;
     height: 16px;
-}
-
-    transform: translateX(4px);
 }
 
 .option-arrow svg {
@@ -2859,21 +2862,12 @@ html {
 }
 
 /* ============================================
-   MODAL STYLES
+   DEPLOYMENT MODAL (analysis page) — content overrides
    ============================================ */
 
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+#deploymentModal.active {
     background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(10px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
     animation: fadeIn 0.3s ease;
 }
 
@@ -2886,7 +2880,7 @@ html {
     }
 }
 
-.modal-content {
+#deploymentModal .modal-content {
     background: rgba(26, 26, 36, 0.95);
     border: 1px solid rgba(139, 92, 246, 0.3);
     border-radius: 16px;

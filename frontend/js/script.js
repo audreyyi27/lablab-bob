@@ -286,13 +286,13 @@ function addClickHandlers() {
         });
     });
     
-    // Primary button
-    const primaryBtn = document.querySelector('.btn-primary');
-    if (primaryBtn) {
-        primaryBtn.addEventListener('click', () => {
+    // Primary buttons without their own navigation (skip hero "Start Analysis")
+    document.querySelectorAll('.btn-primary').forEach((btn) => {
+        if (btn.getAttribute('onclick')) return;
+        btn.addEventListener('click', () => {
             showNotification('Starting new analysis...', 'info');
         });
-    }
+    });
     
     // Analysis items
     const analysisItems = document.querySelectorAll('.analysis-item');
