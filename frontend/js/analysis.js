@@ -137,6 +137,20 @@ async function handleAudienceSelection(audience) {
     });
     event.target.closest('.audience-btn').classList.add('selected');
 
+    // Show/hide deployment panel based on audience
+    const deploymentPanel = document.getElementById('deploymentPanel');
+    if (deploymentPanel) {
+        if (audience === 'software_engineer' || audience === 'engineering_manager') {
+            deploymentPanel.style.display = 'block';
+            // Initialize deployment controls if not already done
+            if (currentRepoForDeployment === null) {
+                initializeDeploymentControls(currentOwner, currentRepoName);
+            }
+        } else {
+            deploymentPanel.style.display = 'none';
+        }
+    }
+
     // Show loading
     document.getElementById('analysisLoading').style.display = 'flex';
     document.getElementById('documentDisplay').style.display = 'none';
@@ -578,15 +592,61 @@ async function handleDeploymentAnalysis(owner, repo) {
 }
 
 /**
- * Handle deployment trigger
+ * Handle deployment trigger - opens modal for configuration
  */
 async function handleDeploymentTrigger(owner, repo) {
+    // Open deployment configuration modal
+    openDeploymentModal(owner, repo);
+}
+
+/**
+ * Open deployment configuration modal
+ */
+function openDeploymentModal(owner, repo) {
+    const modal = document.getElementById('deploymentModal');
+    if (!modal) return;
+    
+    // Set default branch from current repo
+    const branchInput = document.getElementById('deployBranch');
+    if (branchInput && currentRepo) {
+        branchInput.value = currentRepo.default_branch || 'main';
+    }
+    
+    modal.style.display = 'flex';
+    
+    // Store repo info for confirmation
+    modal.dataset.owner = owner;
+    modal.dataset.repo = repo;
+}
+
+/**
+ * Close deployment modal
+ */
+window.closeDeploymentModal = function() {
+    const modal = document.getElementById('deploymentModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+};
+
+/**
+ * Confirm and execute deployment
+ */
+window.confirmDeployment = async function() {
+    const modal = document.getElementById('deploymentModal');
+    if (!modal) return;
+    
+    const owner = modal.dataset.owner;
+    const repo = modal.dataset.repo;
+    const branch = document.getElementById('deployBranch').value || 'main';
+    const environment = document.getElementById('deployEnvironment').value;
+    const deploymentType = document.getElementById('deployType').value;
+    
+    // Close modal
+    closeDeploymentModal();
+    
     const triggerBtn = document.getElementById('triggerDeploymentBtn');
     
-    if (!confirm(`Deploy ${owner}/${repo} to production?\n\nThis will trigger an automated deployment via Watsonx Orchestrate.`)) {
-        return;
-    }
-
     try {
         triggerBtn.disabled = true;
         triggerBtn.innerHTML = `
@@ -595,8 +655,9 @@ async function handleDeploymentTrigger(owner, repo) {
         `;
 
         const deployment = await window.deploymentManager.triggerDeployment(owner, repo, {
-            environment: 'production',
-            deploymentType: 'manual'
+            branch,
+            environment,
+            deploymentType
         });
 
         // Show active deployment

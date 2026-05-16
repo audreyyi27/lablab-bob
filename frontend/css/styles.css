@@ -1682,7 +1682,6 @@ html {
     background: var(--border-color);
 }
 
-<<<<<<< HEAD
 /* Analysis Panel Styles */
 .analysis-panel {
     background: rgba(26, 26, 36, 0.6);
@@ -1859,44 +1858,6 @@ html {
 .btn-sm {
     padding: 8px 16px;
     font-size: 14px;
-}
-=======
-/* ============================================
-   DEPLOYMENT PANEL STYLES (Engineer Role)
-   ============================================ */
-
-.deployment-panel {
-    background: var(--bg-card);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 24px;
-    animation: slideUp 0.5s ease-out;
-}
-
-.deployment-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.deployment-info {
-    padding: 16px;
-    background: rgba(139, 92, 246, 0.05);
-    border-radius: 8px;
-    border-left: 3px solid var(--purple-500);
-}
-
-.deployment-description {
-    color: var(--text-secondary);
-    line-height: 1.6;
-}
-
-.deployment-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
 }
 
 .deployment-actions button {
@@ -2154,4 +2115,418 @@ html {
         grid-template-columns: 1fr;
     }
 }
->>>>>>> 30845ee (Watsonz Orchestrate CD)
+/* ============================================
+   DEPLOYMENT PANEL STYLES
+   ============================================ */
+
+.deployment-panel {
+    background: rgba(26, 26, 36, 0.6);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    backdrop-filter: blur(20px);
+}
+
+.deployment-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.deployment-info {
+    padding: 16px;
+    background: rgba(139, 92, 246, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.deployment-description {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.deployment-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.deployment-analysis {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(16, 185, 129, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 12px;
+}
+
+.analysis-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 16px 0;
+}
+
+.analysis-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.analysis-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.analysis-label {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+}
+
+.analysis-value {
+    font-size: 16px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.analysis-recommendations,
+.analysis-risks {
+    margin-top: 16px;
+}
+
+.analysis-recommendations h5,
+.analysis-risks h5 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+}
+
+.analysis-recommendations ul,
+.analysis-risks ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.analysis-recommendations li,
+.analysis-risks li {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 4px;
+}
+
+.risk-list li {
+    color: #f59e0b;
+}
+
+.active-deployments,
+.deployment-history {
+    margin-top: 24px;
+}
+
+.deployments-title,
+.history-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 16px 0;
+}
+
+.deployments-list,
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.deployment-card {
+    background: rgba(26, 26, 36, 0.8);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.3s ease;
+}
+
+.deployment-card:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    transform: translateY(-2px);
+}
+
+.deployment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.deployment-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.deployment-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-blue {
+    background: rgba(59, 130, 246, 0.1);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.status-yellow {
+    background: rgba(245, 158, 11, 0.1);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.status-green {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-red {
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.status-gray {
+    background: rgba(156, 163, 175, 0.1);
+    color: #9ca3af;
+    border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+.deployment-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-label {
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+.detail-value {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.history-item {
+    background: rgba(26, 26, 36, 0.4);
+    border: 1px solid rgba(139, 92, 246, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.history-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+.history-status {
+    font-size: 11px;
+}
+
+.history-details {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* ============================================
+   MODAL STYLES
+   ============================================ */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background: rgba(26, 26, 36, 0.95);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--text-primary);
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.form-input,
+.form-select {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(26, 26, 36, 0.6);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.form-input:focus,
+.form-select:focus {
+    outline: none;
+    border-color: rgba(139, 92, 246, 0.5);
+    background: rgba(26, 26, 36, 0.8);
+}
+
+.form-group label input[type="checkbox"] {
+    margin-right: 8px;
+    width: auto;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 24px;
+    border-top: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+/* ============================================
+   NOTIFICATION STYLES
+   ============================================ */
+
+.notification {
+    position: fixed;
+    top: 100px;
+    right: 40px;
+    padding: 16px 24px;
+    border-radius: 12px;
+    background: rgba(26, 26, 36, 0.95);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(20px);
+    z-index: 1001;
+    animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.notification.success {
+    border-color: rgba(16, 185, 129, 0.5);
+    background: rgba(16, 185, 129, 0.1);
+}

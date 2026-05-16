@@ -314,7 +314,58 @@
                         <div id="historyList" class="history-list"></div>
                     </div>
                 </div>
+            </div>
 
+            <!-- Deployment Configuration Modal -->
+            <div id="deploymentModal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Configure Deployment</h3>
+                        <button class="modal-close" onclick="closeDeploymentModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="deployBranch">Branch</label>
+                            <input type="text" id="deployBranch" class="form-input" value="main" placeholder="main">
+                        </div>
+                        <div class="form-group">
+                            <label for="deployEnvironment">Environment</label>
+                            <select id="deployEnvironment" class="form-select">
+                                <option value="development">Development</option>
+                                <option value="staging">Staging</option>
+                                <option value="production" selected>Production</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="deployType">Deployment Type</label>
+                            <select id="deployType" class="form-select">
+                                <option value="manual" selected>Manual</option>
+                                <option value="auto">Automatic</option>
+                                <option value="scheduled">Scheduled</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="runTests" checked>
+                                Run tests before deployment
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="notifyTeam" checked>
+                                Notify team on completion
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" onclick="closeDeploymentModal()">Cancel</button>
+                        <button class="btn-primary" onclick="confirmDeployment()">Deploy</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="results-section" style="display: none;">
                 <!-- File Structure Card -->
                 <div class="file-structure-card">
                     <div class="card-header">
