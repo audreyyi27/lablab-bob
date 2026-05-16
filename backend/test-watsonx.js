@@ -8,10 +8,10 @@ console.log('=== RepoTalk watsonx.ai Integration Test ===\n');
 
 // Test 1: Configuration check
 console.log('1. Configuration Check:');
-console.log('   WATSONX_API_KEY:', config.watsonx.apiKey ? '✓ Set' : '✗ Not set');
-console.log('   WATSONX_PROJECT_ID:', config.watsonx.projectId ? '✓ Set' : '✗ Not set');
-console.log('   WATSONX_REGION:', config.watsonx.region);
-console.log('   WATSONX_MODEL_ID:', config.watsonx.modelId);
+console.log('   WATSONX_WML_API_KEY:', config.watsonx.apiKey ? '✓ Set' : '✗ Not set');
+console.log('   WATSONX_WML_PROJECT_ID:', config.watsonx.projectId ? '✓ Set' : '✗ Not set');
+console.log('   WATSONX_WML_REGION:', config.watsonx.region);
+console.log('   WATSONX_WML_MODEL_ID:', config.watsonx.modelId);
 console.log('   watsonx.ai Configured:', isWatsonxConfigured() ? '✓ Yes' : '✗ No');
 console.log();
 
@@ -56,10 +56,10 @@ if (isWatsonxConfigured()) {
 } else {
   console.log('✗ watsonx.ai is not configured — document generation will fail until configured');
   console.log('  Set these environment variables in .env:');
-  console.log('    - WATSONX_API_KEY');
-  console.log('    - WATSONX_PROJECT_ID');
-  console.log('    - WATSONX_REGION (optional, defaults to us-south)');
-  console.log('    - WATSONX_MODEL_ID (optional, defaults to ibm/granite-13b-chat-v2)');
+  console.log('    - WATSONX_WML_API_KEY');
+  console.log('    - WATSONX_WML_PROJECT_ID');
+  console.log('    - WATSONX_WML_REGION (optional, defaults to us-south)');
+  console.log('    - WATSONX_WML_MODEL_ID (optional, defaults to ibm/granite-13b-chat-v2)');
 }
 console.log();
 console.log('For detailed setup instructions, see WATSONX_INTEGRATION.md');

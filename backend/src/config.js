@@ -17,6 +17,15 @@ function required(name) {
 const port = Number(process.env.PORT) || 3000;
 const frontendUrl = (process.env.FRONTEND_URL || `http://localhost:${port}`).replace(/\/$/, '');
 
+/** Prefer WATSONX_WML_*; fall back to legacy WATSONX_* for existing .env files. */
+function envFirst(...names) {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value) return value;
+  }
+  return '';
+}
+
 export const config = {
   port,
   frontendUrl,
@@ -28,15 +37,21 @@ export const config = {
       process.env.GITHUB_CALLBACK_URL ||
       `http://localhost:${port}/api/auth/github/callback`,
   },
+  /** IBM watsonx.ai Runtime / WML — repository analysis & document generation */
   watsonx: {
+    apiKey: envFirst('WATSONX_WML_API_KEY', 'WATSONX_API_KEY'),
+    projectId: envFirst('WATSONX_WML_PROJECT_ID', 'WATSONX_PROJECT_ID'),
+    region: envFirst('WATSONX_WML_REGION', 'WATSONX_REGION') || 'us-south',
+    modelId:
+      envFirst('WATSONX_WML_MODEL_ID', 'WATSONX_MODEL_ID') || 'ibm/granite-13b-chat-v2',
+  },
+  /** Watsonx Orchestrate — Continuous Delivery workflows */
+  orchestrate: {
     apiKey: process.env.WATSONX_API_KEY || process.env.apikey || '',
-    apikey: process.env.WATSONX_API_KEY || process.env.apikey || '',
-    projectId: process.env.WATSONX_PROJECT_ID || '',
-    region: process.env.WATSONX_REGION || 'us-south',
-    modelId: process.env.WATSONX_MODEL_ID || 'ibm/granite-13b-chat-v2',
     url: process.env.WATSONX_URL || process.env.url || '',
     iamApiKeyId: process.env.WATSONX_IAM_APIKEY_ID || process.env.iam_apikey_id || '',
-    serviceidCrn: process.env.WATSONX_SERVICEID_CRN || process.env.iam_serviceid_crn || '',
+    serviceidCrn:
+      process.env.WATSONX_SERVICEID_CRN || process.env.iam_serviceid_crn || '',
   },
   vercel: {
     token: process.env.VERCEL_TOKEN || '',

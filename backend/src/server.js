@@ -53,14 +53,15 @@ app.listen(config.port, async () => {
       'Warning: GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET not set — Connect GitHub will not work until configured.'
     );
   }
-<<<<<<< HEAD
   if (!isWatsonxConfigured()) {
     console.warn(
-      'Warning: WATSONX_API_KEY / WATSONX_PROJECT_ID not set — audience documents require IBM watsonx.ai.'
+      'Warning: WATSONX_WML_API_KEY / WATSONX_WML_PROJECT_ID not set — audience documents require IBM watsonx.ai WML.'
     );
   } else {
-    console.log(`IBM watsonx.ai enabled (model: ${config.watsonx.modelId}, region: ${config.watsonx.region})`);
-=======
+    console.log(
+      `IBM watsonx.ai enabled (model: ${config.watsonx.modelId}, region: ${config.watsonx.region})`
+    );
+  }
 
   try {
     const status = await watsonxClient.verifyConnection();
@@ -79,6 +80,5 @@ app.listen(config.port, async () => {
     }
   } catch (err) {
     console.warn(`[watsonx-orchestrate] startup probe failed: ${err.message}`);
->>>>>>> b91571c (Vercel deployment CD)
   }
 });

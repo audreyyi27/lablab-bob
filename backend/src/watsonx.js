@@ -4,6 +4,25 @@
 import { WatsonXAI } from '@ibm-cloud/watsonx-ai';
 import { IamAuthenticator } from 'ibm-cloud-sdk-core';
 import { config } from './config.js';
+import {
+  isVercelConfigured,
+  deployFromGithub,
+  getDeployment as getVercelDeployment,
+  getDeploymentEvents as getVercelDeploymentEvents,
+  summarizeBuildError,
+  getProject as getVercelProject,
+  updateProject as updateVercelProject,
+  redeployProject as redeployVercelProject,
+  mapState as mapVercelState,
+  productionUrl as vercelProductionUrl,
+  inspectorUrl as vercelInspectorUrl,
+  deploymentId as vercelDeploymentId,
+} from './vercel.js';
+import { fetchRepoWithTree } from './github.js';
+import { proposeFix } from './autoheal.js';
+
+const MAX_AUTOHEAL_ATTEMPTS = 4;
+const VERCEL_POLL_MS = 4000;
 
 let watsonxAiInstance = null;
 
@@ -26,7 +45,7 @@ export function isWatsonxConfigured() {
 function assertWatsonxConfigured() {
   if (!isWatsonxConfigured()) {
     throw new WatsonxError(
-      'IBM watsonx.ai is not configured. Set WATSONX_API_KEY and WATSONX_PROJECT_ID in .env, then restart the server.',
+      'IBM watsonx.ai WML is not configured. Set WATSONX_WML_API_KEY and WATSONX_WML_PROJECT_ID in .env, then restart the server.',
       { status: 503 }
     );
   }
@@ -36,21 +55,10 @@ function assertWatsonxConfigured() {
  * Initialize watsonx.ai client
  */
 function getWatsonxClient() {
-<<<<<<< HEAD
   assertWatsonxConfigured();
 
-  if (!watsonxClient) {
-    watsonxClient = WatsonXAI.newInstance({
-=======
   if (!watsonxAiInstance) {
-    if (!config.watsonx.apiKey || !config.watsonx.projectId) {
-      throw new Error(
-        'watsonx.ai is not configured. Set WATSONX_API_KEY and WATSONX_PROJECT_ID in .env'
-      );
-    }
-
     watsonxAiInstance = WatsonXAI.newInstance({
->>>>>>> b91571c (Vercel deployment CD)
       version: '2024-05-31',
       serviceUrl: `https://${config.watsonx.region}.ml.cloud.ibm.com`,
       authenticator: new IamAuthenticator({ apikey: config.watsonx.apiKey }),
@@ -616,36 +624,9 @@ export async function generateDocumentWithAI(audience, analysisData) {
     }
   );
 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
-import { config } from './config.js';
-=======
 
-import {
-  isVercelConfigured,
-  deployFromGithub,
-  getDeployment as getVercelDeployment,
-  getDeploymentEvents as getVercelDeploymentEvents,
-  summarizeBuildError,
-  getProject as getVercelProject,
-  updateProject as updateVercelProject,
-  redeployProject as redeployVercelProject,
-  mapState as mapVercelState,
-  productionUrl as vercelProductionUrl,
-  inspectorUrl as vercelInspectorUrl,
-  deploymentId as vercelDeploymentId,
-} from './vercel.js';
-import { fetchRepoWithTree } from './github.js';
-import { proposeFix } from './autoheal.js';
-
-const MAX_AUTOHEAL_ATTEMPTS = 4;
-const VERCEL_POLL_MS = 4000;
->>>>>>> b91571c (Vercel deployment CD)
-
-const WATSONX_API_BASE = config.watsonx.url;
-const WATSONX_API_KEY = config.watsonx.apikey;
+const WATSONX_API_BASE = config.orchestrate.url;
+const WATSONX_API_KEY = config.orchestrate.apiKey;
 
 // In-memory mirror of live deployments (both Vercel and simulated). Vercel
 // status is refreshed on demand; simulated ones progress on a timer.
@@ -1232,10 +1213,3 @@ export class WatsonxOrchestrate {
 }
 
 export const watsonxClient = new WatsonxOrchestrate();
-<<<<<<< HEAD
->>>>>>> 30845ee (Watsonz Orchestrate CD)
-
-// Made with Bob
->>>>>>> 92066e7 (rebased)
-=======
->>>>>>> b91571c (Vercel deployment CD)

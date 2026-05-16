@@ -50,7 +50,7 @@ async function handleAnalyzeRequest(req, res, accessToken) {
   if (!isWatsonxConfigured()) {
     return res.status(503).json({
       error:
-        'IBM watsonx.ai is not configured. Set WATSONX_API_KEY and WATSONX_PROJECT_ID in .env, then restart the server.',
+        'IBM watsonx.ai WML is not configured. Set WATSONX_WML_API_KEY and WATSONX_WML_PROJECT_ID in .env, then restart the server.',
     });
   }
 
