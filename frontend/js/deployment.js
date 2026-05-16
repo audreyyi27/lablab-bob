@@ -128,32 +128,6 @@ class DeploymentManager {
   }
 
   /**
-   * Analyze deployment readiness with AI
-   */
-  async analyzeDeployment(owner, repo) {
-    try {
-      const response = await fetch(`${this.apiBase()}/api/deployment/analyze`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ owner, repo }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to analyze deployment');
-      }
-
-      const data = await response.json();
-      return data.analysis;
-    } catch (error) {
-      console.error('Analyze deployment error:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Start polling for deployment status
    */
   startPolling(executionId, interval = 5000) {

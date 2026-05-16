@@ -6,6 +6,23 @@ import { githubFetch } from '../github.js';
 const router = express.Router();
 
 /**
+ * Report watsonx Orchestrate connection status (auth + workspace probe).
+ * GET /api/deployment/connection
+ */
+router.get('/connection', async (_req, res) => {
+  try {
+    const status = await watsonxClient.verifyConnection();
+    res.json({ success: true, connection: status });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to verify watsonx connection',
+      message: error.message,
+    });
+  }
+});
+
+/**
  * Trigger a deployment for a repository
  * POST /api/deployment/trigger
  */
@@ -17,19 +34,33 @@ router.post('/trigger', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Owner and repo are required' });
     }
 
-    // Get repository information from GitHub
-    const repoData = await githubFetch(
-      `/repos/${owner}/${repo}`,
-      req.session.accessToken
-    );
+    // Best-effort lookup of the default branch from GitHub.
+    // If this fails (404, private repo, no token, rate limit) we still
+    // proceed so Watsonx Orchestrate can execute the deployment.
+    let defaultBranch = null;
+    try {
+      const repoData = await githubFetch(
+        `/repos/${owner}/${repo}`,
+        req.session.accessToken
+      );
+      defaultBranch = repoData?.default_branch || null;
+    } catch (err) {
+      console.warn(
+        `[deployment] could not resolve default branch for ${owner}/${repo}: ${err.message}`
+      );
+    }
 
-    // Trigger deployment via Watsonx Orchestrate
+    const resolvedBranch = branch || defaultBranch || 'main';
+    const resolvedEnv = environment || 'production';
+
     const deployment = await watsonxClient.triggerDeployment({
       repository: repo,
       owner,
-      branch: branch || repoData.default_branch || 'main',
-      environment: environment || 'production',
+      branch: resolvedBranch,
+      environment: resolvedEnv,
       deploymentType: deploymentType || 'auto',
+      triggeredBy: req.session.user?.login || 'engineer',
+      accessToken: req.session.accessToken || null,
     });
 
     res.json({
@@ -38,10 +69,15 @@ router.post('/trigger', requireAuth, async (req, res) => {
         id: deployment.execution_id || deployment.id,
         status: deployment.status || 'initiated',
         repository: `${owner}/${repo}`,
-        branch: branch || repoData.default_branch || 'main',
-        environment: environment || 'production',
+        branch: resolvedBranch,
+        environment: resolvedEnv,
         triggeredAt: new Date().toISOString(),
         triggeredBy: req.session.user?.login || 'engineer',
+        provider: deployment.provider || 'simulated',
+        url: deployment.url || null,
+        inspectorUrl: deployment.inspectorUrl || null,
+        project: deployment.project || null,
+        orchestrate: deployment.orchestrate || null,
       },
     });
   } catch (error) {
@@ -71,8 +107,14 @@ router.get('/status/:executionId', requireAuth, async (req, res) => {
         startedAt: status.started_at,
         completedAt: status.completed_at,
         duration: status.duration,
-        logs: status.logs || [],
+        logs: (status.logs || []).slice(-30),
         result: status.result,
+        provider: status.provider || 'simulated',
+        url: status.url || null,
+        inspectorUrl: status.inspectorUrl || null,
+        project: status.project || null,
+        attempts: status.attempts || null,
+        autoHealActive: status.autoHealActive || false,
       },
     });
   } catch (error) {
@@ -132,61 +174,6 @@ router.post('/cancel/:executionId', requireAuth, async (req, res) => {
     console.error('Cancel deployment error:', error);
     res.status(500).json({
       error: 'Failed to cancel deployment',
-      message: error.message,
-    });
-  }
-});
-
-/**
- * AI-powered deployment analysis
- * POST /api/deployment/analyze
- */
-router.post('/analyze', requireAuth, async (req, res) => {
-  try {
-    const { owner, repo } = req.body;
-
-    if (!owner || !repo) {
-      return res.status(400).json({ error: 'Owner and repo are required' });
-    }
-
-    // Get repository data
-    const repoData = await githubFetch(
-      `/repos/${owner}/${repo}`,
-      req.session.accessToken
-    );
-
-    // Get recent commits
-    const commits = await githubFetch(
-      `/repos/${owner}/${repo}/commits?per_page=10`,
-      req.session.accessToken
-    );
-
-    // Analyze deployment readiness
-    const analysis = await watsonxClient.analyzeDeploymentReadiness({
-      name: repo,
-      owner,
-      commits: commits.map((c) => ({
-        sha: c.sha,
-        message: c.commit.message,
-        author: c.commit.author.name,
-        date: c.commit.author.date,
-      })),
-    });
-
-    res.json({
-      success: true,
-      analysis: {
-        ready: analysis.ready !== false,
-        confidence: analysis.confidence || 0.8,
-        recommendations: analysis.recommendations || [],
-        risks: analysis.risks || [],
-        estimatedDuration: analysis.estimated_duration || '5-10 minutes',
-      },
-    });
-  } catch (error) {
-    console.error('Deployment analysis error:', error);
-    res.status(500).json({
-      error: 'Failed to analyze deployment',
       message: error.message,
     });
   }

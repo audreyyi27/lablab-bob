@@ -105,9 +105,9 @@ function initializeAnalysisListeners() {
     const exportDocBtn = document.getElementById('exportDocBtn');
 
     audienceBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (evt) => {
             const audience = btn.dataset.audience;
-            handleAudienceSelection(audience);
+            handleAudienceSelection(audience, evt);
         });
     });
 
@@ -122,38 +122,96 @@ function initializeAnalysisListeners() {
             exportDocument();
         });
     }
+
+    document.querySelectorAll('#engineerModeSwitch .mode-btn').forEach((btn) => {
+        btn.addEventListener('click', () => setEngineerMode(btn.dataset.mode));
+    });
+}
+
+// Currently-selected audience and engineer mode ('docs' | 'cd')
+let currentAudience = null;
+let currentEngineerMode = 'docs';
+
+function isEngineerAudience(audience) {
+    return audience === 'software_engineer' || audience === 'engineering_manager';
 }
 
 // Handle audience selection
-async function handleAudienceSelection(audience) {
+async function handleAudienceSelection(audience, evt) {
     if (!currentOwner || !currentRepoName) {
         showError('Please analyze a repository first');
         return;
     }
 
-    // Update UI
+    currentAudience = audience;
+
+    // Update audience-button UI
     document.querySelectorAll('.audience-btn').forEach(btn => {
         btn.classList.remove('selected');
     });
-    event.target.closest('.audience-btn').classList.add('selected');
+    const target = evt?.target?.closest?.('.audience-btn')
+        || document.querySelector(`.audience-btn[data-audience="${audience}"]`);
+    if (target) target.classList.add('selected');
 
-    // Show/hide deployment panel based on audience
+    const modeSwitch = document.getElementById('engineerModeSwitch');
     const deploymentPanel = document.getElementById('deploymentPanel');
-    if (deploymentPanel) {
-        if (audience === 'software_engineer' || audience === 'engineering_manager') {
-            deploymentPanel.style.display = 'block';
-            // Initialize deployment controls if not already done
-            if (currentRepoForDeployment === null) {
-                initializeDeploymentControls(currentOwner, currentRepoName);
-            }
-        } else {
-            deploymentPanel.style.display = 'none';
-        }
+    const documentDisplay = document.getElementById('documentDisplay');
+    const analysisLoading = document.getElementById('analysisLoading');
+
+    if (!isEngineerAudience(audience)) {
+        if (modeSwitch) modeSwitch.style.display = 'none';
+        if (deploymentPanel) deploymentPanel.style.display = 'none';
+        await runDocumentGeneration(audience);
+        return;
     }
 
-    // Show loading
-    document.getElementById('analysisLoading').style.display = 'flex';
-    document.getElementById('documentDisplay').style.display = 'none';
+    // Engineer audiences: show the Docs / CD toggle and reset state.
+    if (modeSwitch) modeSwitch.style.display = 'block';
+    if (documentDisplay) documentDisplay.style.display = 'none';
+    if (analysisLoading) analysisLoading.style.display = 'none';
+    if (deploymentPanel) deploymentPanel.style.display = 'none';
+
+    // Default engineer mode = Documentation
+    setEngineerMode(currentEngineerMode || 'docs');
+}
+
+// Apply a Docs / CD mode for an engineer audience
+async function applyEngineerMode(mode) {
+    if (!currentAudience || !isEngineerAudience(currentAudience)) return;
+
+    currentEngineerMode = mode;
+
+    const documentDisplay = document.getElementById('documentDisplay');
+    const analysisLoading = document.getElementById('analysisLoading');
+    const deploymentPanel = document.getElementById('deploymentPanel');
+
+    if (mode === 'cd') {
+        if (documentDisplay) documentDisplay.style.display = 'none';
+        if (analysisLoading) analysisLoading.style.display = 'none';
+        if (deploymentPanel) deploymentPanel.style.display = 'block';
+        initializeDeploymentControls(currentOwner, currentRepoName);
+        deploymentPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+    }
+
+    if (deploymentPanel) deploymentPanel.style.display = 'none';
+    await runDocumentGeneration(currentAudience);
+}
+
+// Visually mark a mode and then run it
+function setEngineerMode(mode) {
+    document.querySelectorAll('#engineerModeSwitch .mode-btn').forEach((b) => {
+        b.classList.toggle('selected', b.dataset.mode === mode);
+    });
+    applyEngineerMode(mode);
+}
+
+// Run document generation for a given audience
+async function runDocumentGeneration(audience) {
+    const loading = document.getElementById('analysisLoading');
+    const display = document.getElementById('documentDisplay');
+    if (loading) loading.style.display = 'flex';
+    if (display) display.style.display = 'none';
 
     try {
         await refreshAuthMode();
@@ -166,7 +224,7 @@ async function handleAudienceSelection(audience) {
                 body: JSON.stringify({
                     owner: currentOwner,
                     repo: currentRepoName,
-                    audience: audience,
+                    audience,
                 }),
             });
         } else {
@@ -176,7 +234,7 @@ async function handleAudienceSelection(audience) {
                 body: JSON.stringify({
                     owner: currentOwner,
                     repo: currentRepoName,
-                    audience: audience,
+                    audience,
                 }),
             });
         }
@@ -191,7 +249,7 @@ async function handleAudienceSelection(audience) {
     } catch (error) {
         console.error('Analysis error:', error);
         showError(error.message);
-        document.getElementById('analysisLoading').style.display = 'none';
+        if (loading) loading.style.display = 'none';
     }
 }
 
@@ -496,107 +554,108 @@ function handleFileTreeClick(e) {
 
 let currentRepoForDeployment = null;
 
+let deploymentStatusListenerBound = false;
+
 /**
  * Initialize deployment controls when repository is loaded
  */
 function initializeDeploymentControls(owner, repo) {
     currentRepoForDeployment = { owner, repo };
-    
+
     const deploymentPanel = document.getElementById('deploymentPanel');
     if (deploymentPanel) {
         deploymentPanel.style.display = 'block';
     }
 
-    // Set up event listeners
-    const analyzeBtn = document.getElementById('analyzeDeploymentBtn');
     const triggerBtn = document.getElementById('triggerDeploymentBtn');
-
-    if (analyzeBtn) {
-        analyzeBtn.onclick = () => handleDeploymentAnalysis(owner, repo);
-    }
 
     if (triggerBtn) {
         triggerBtn.onclick = () => handleDeploymentTrigger(owner, repo);
     }
 
-    // Load deployment history
     loadDeploymentHistory(owner, repo);
+    loadOrchestrateConnection();
 
-    // Listen for deployment status updates
-    window.addEventListener('deploymentStatusUpdate', handleDeploymentStatusUpdate);
+    if (!deploymentStatusListenerBound) {
+        window.addEventListener('deploymentStatusUpdate', handleDeploymentStatusUpdate);
+        deploymentStatusListenerBound = true;
+    }
 }
 
-/**
- * Handle AI deployment analysis
- */
-async function handleDeploymentAnalysis(owner, repo) {
-    const analysisSection = document.getElementById('deploymentAnalysis');
-    const analyzeBtn = document.getElementById('analyzeDeploymentBtn');
-    
+async function loadOrchestrateConnection() {
+    const badge = document.getElementById('orchestrateConnection');
+    if (!badge) return;
+
     try {
-        analyzeBtn.disabled = true;
-        analyzeBtn.innerHTML = `
-            <div class="loading-spinner" style="width: 16px; height: 16px;"></div>
-            Analyzing...
-        `;
+        const res = await fetch(`${apiBase()}/api/deployment/connection`, { credentials: 'include' });
+        const data = await res.json();
+        const conn = data?.connection || {};
 
-        const analysis = await window.deploymentManager.analyzeDeployment(owner, repo);
+        let cls = 'orchestrate-status-unknown';
+        let text = 'watsonx Orchestrate: status unknown';
 
-        // Display analysis results
-        document.getElementById('analysisReadiness').textContent = 
-            analysis.ready ? '✅ Ready' : '⚠️ Not Ready';
-        document.getElementById('analysisConfidence').textContent = 
-            `${Math.round(analysis.confidence * 100)}%`;
-        document.getElementById('analysisDuration').textContent = 
-            analysis.estimatedDuration;
-
-        // Show recommendations
-        const recommendationsEl = document.getElementById('analysisRecommendations');
-        if (analysis.recommendations && analysis.recommendations.length > 0) {
-            recommendationsEl.innerHTML = `
-                <h5>Recommendations:</h5>
-                <ul>
-                    ${analysis.recommendations.map(r => `<li>${escapeHtml(r)}</li>`).join('')}
-                </ul>
-            `;
+        if (!conn.configured) {
+            cls = 'orchestrate-status-warn';
+            text = 'watsonx Orchestrate: not configured (running in local mode)';
+        } else if (conn.authenticated && conn.workflowAccessible) {
+            cls = 'orchestrate-status-ok';
+            text = `watsonx Orchestrate: connected (${conn.region || 'region ?'}/${(conn.instanceId || '').slice(0, 8)}…)`;
+        } else if (conn.authenticated) {
+            cls = 'orchestrate-status-warn';
+            text = `watsonx Orchestrate: authenticated, workspace role pending — ${conn.message || ''}`;
         } else {
-            recommendationsEl.innerHTML = '';
+            cls = 'orchestrate-status-err';
+            text = `watsonx Orchestrate: ${conn.message || 'authentication failed'}`;
         }
 
-        // Show risks
-        const risksEl = document.getElementById('analysisRisks');
-        if (analysis.risks && analysis.risks.length > 0) {
-            risksEl.innerHTML = `
-                <h5>Potential Risks:</h5>
-                <ul class="risk-list">
-                    ${analysis.risks.map(r => `<li>⚠️ ${escapeHtml(r)}</li>`).join('')}
-                </ul>
-            `;
-        } else {
-            risksEl.innerHTML = '';
-        }
-
-        analysisSection.style.display = 'block';
-
-    } catch (error) {
-        showError('Failed to analyze deployment: ' + error.message);
-    } finally {
-        analyzeBtn.disabled = false;
-        analyzeBtn.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15M9 5C9 6.10457 9.89543 7 11 7H13C14.1046 7 15 6.10457 15 5M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5M12 12H15M12 16H15M9 12H9.01M9 16H9.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            AI Analysis
-        `;
+        badge.className = `orchestrate-connection ${cls}`;
+        badge.querySelector('.text').textContent = text;
+    } catch (err) {
+        badge.className = 'orchestrate-connection orchestrate-status-err';
+        badge.querySelector('.text').textContent = `watsonx Orchestrate: ${err.message}`;
     }
 }
 
 /**
- * Handle deployment trigger - opens modal for configuration
+ * Handle deployment trigger — executes immediately via watsonx Orchestrate
+ * using sensible defaults (no configuration modal required).
  */
 async function handleDeploymentTrigger(owner, repo) {
-    // Open deployment configuration modal
-    openDeploymentModal(owner, repo);
+    const triggerBtn = document.getElementById('triggerDeploymentBtn');
+    const branch = currentRepo?.default_branch || 'main';
+    const environment = 'production';
+    const deploymentType = 'auto';
+
+    try {
+        if (triggerBtn) {
+            triggerBtn.disabled = true;
+            triggerBtn.innerHTML = `
+                <div class="loading-spinner" style="width: 16px; height: 16px;"></div>
+                Deploying via watsonx Orchestrate…
+            `;
+        }
+
+        const deployment = await window.deploymentManager.triggerDeployment(owner, repo, {
+            branch,
+            environment,
+            deploymentType,
+        });
+
+        showActiveDeployment(deployment);
+        showSuccess(`Deployment initiated on ${branch} → ${environment} (id ${deployment.id.substring(0, 8)})`);
+    } catch (error) {
+        showError('Failed to trigger deployment: ' + error.message);
+    } finally {
+        if (triggerBtn) {
+            triggerBtn.disabled = false;
+            triggerBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13 10V3L4 14H11L11 21L20 10L13 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Deploy Now
+            `;
+        }
+    }
 }
 
 /**
@@ -678,6 +737,52 @@ window.confirmDeployment = async function() {
     }
 }
 
+// Track which deployment ids have already triggered the auto-redirect.
+const redirectedDeployments = new Set();
+
+function deploymentUrlBlock(deployment) {
+    if (deployment?.url) {
+        const safeUrl = escapeHtmlAttr(deployment.url);
+        const inspector = deployment.inspectorUrl
+            ? `<a href="${escapeHtmlAttr(deployment.inspectorUrl)}" target="_blank" rel="noopener" class="deployment-inspector">Inspect on Vercel ↗</a>`
+            : '';
+        return `
+            <div class="deployment-url-block">
+                <span class="deployment-url-label">Production</span>
+                <a href="${safeUrl}" target="_blank" rel="noopener" class="deployment-url-link">${safeUrl}</a>
+                ${inspector}
+            </div>
+        `;
+    }
+    if (deployment?.inspectorUrl) {
+        return `
+            <div class="deployment-url-block">
+                <a href="${escapeHtmlAttr(deployment.inspectorUrl)}" target="_blank" rel="noopener" class="deployment-inspector">Inspect on Vercel ↗</a>
+            </div>
+        `;
+    }
+    return '';
+}
+
+function deploymentProgressBlock(deployment) {
+    const attempts = deployment?.attempts;
+    const logs = deployment?.logs || [];
+    const lastLog = logs[logs.length - 1] || '';
+    const attemptCount = Array.isArray(attempts) ? attempts.length : 0;
+    if (attemptCount <= 1 && !lastLog) return '';
+
+    const attemptText = attemptCount > 1
+        ? `Attempt ${attemptCount} — auto-healed by RepoTalk`
+        : 'Building on Vercel…';
+
+    return `
+        <div class="deployment-progress">
+            <span class="deployment-progress-attempt">${escapeHtml(attemptText)}</span>
+            <span class="deployment-progress-log">${escapeHtml(lastLog)}</span>
+        </div>
+    `;
+}
+
 /**
  * Show active deployment
  */
@@ -686,13 +791,15 @@ function showActiveDeployment(deployment) {
     const deploymentsList = document.getElementById('deploymentsList');
 
     const statusInfo = window.deploymentManager.formatStatus(deployment.status);
+    const providerLabel = deployment.provider === 'vercel' ? 'Vercel' : 'Simulated';
 
     const deploymentCard = document.createElement('div');
     deploymentCard.className = 'deployment-card';
     deploymentCard.id = `deployment-${deployment.id}`;
+    deploymentCard.dataset.provider = deployment.provider || 'simulated';
     deploymentCard.innerHTML = `
         <div class="deployment-header">
-            <span class="deployment-id">#${deployment.id.substring(0, 8)}</span>
+            <span class="deployment-id">#${deployment.id.substring(0, 8)} · ${providerLabel}</span>
             <span class="deployment-status status-${statusInfo.color}">
                 ${statusInfo.icon} ${statusInfo.text}
             </span>
@@ -711,6 +818,8 @@ function showActiveDeployment(deployment) {
                 <span class="detail-value">${formatRelativeTime(deployment.triggeredAt)}</span>
             </div>
         </div>
+        <div class="deployment-url-slot">${deploymentUrlBlock(deployment)}</div>
+        <div class="deployment-progress-slot">${deploymentProgressBlock(deployment)}</div>
         <div class="deployment-actions">
             <button class="btn-secondary btn-sm" onclick="cancelDeployment('${deployment.id}')">
                 Cancel
@@ -733,13 +842,36 @@ function handleDeploymentStatusUpdate(event) {
 
     const statusInfo = window.deploymentManager.formatStatus(status.status);
     const statusEl = deploymentCard.querySelector('.deployment-status');
-    
+
     if (statusEl) {
         statusEl.className = `deployment-status status-${statusInfo.color}`;
         statusEl.textContent = `${statusInfo.icon} ${statusInfo.text}`;
     }
 
-    // If completed, move to history
+    const slot = deploymentCard.querySelector('.deployment-url-slot');
+    if (slot && (status.url || status.inspectorUrl)) {
+        slot.innerHTML = deploymentUrlBlock(status);
+    }
+    const progressSlot = deploymentCard.querySelector('.deployment-progress-slot');
+    if (progressSlot) {
+        progressSlot.innerHTML = deploymentProgressBlock(status);
+    }
+
+    // Auto-redirect to production once the deploy is READY.
+    if (status.status === 'completed' && status.url && !redirectedDeployments.has(executionId)) {
+        redirectedDeployments.add(executionId);
+        showSuccess(`Deployment ready → opening ${status.url}`);
+        try {
+            const newTab = window.open(status.url, '_blank', 'noopener');
+            if (!newTab) {
+                // Popup blocked — fall back to same-window navigation after a short delay.
+                setTimeout(() => { window.location.href = status.url; }, 1500);
+            }
+        } catch (_) {
+            setTimeout(() => { window.location.href = status.url; }, 1500);
+        }
+    }
+
     if (status.status === 'completed' || status.status === 'failed' || status.status === 'cancelled') {
         setTimeout(() => {
             deploymentCard.remove();
