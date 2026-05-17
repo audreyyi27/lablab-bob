@@ -3,7 +3,115 @@ document.addEventListener('DOMContentLoaded', () => {
     initAnimations();
     initInteractions();
     initRealTimeUpdates();
+    initEngineerModal();
 });
+
+// Initialize Engineer Modal
+function initEngineerModal() {
+    const engineerCard = document.getElementById('engineer-card');
+    const modal = document.getElementById('engineer-modal');
+    const closeModal = document.getElementById('close-modal');
+    const modalOverlay = modal?.querySelector('.modal-overlay');
+    const readDocsBtn = document.getElementById('read-docs-btn');
+    const deployBtn = document.getElementById('deploy-btn');
+    const analyzeDeploymentBtn = document.getElementById('analyze-deployment-btn');
+    const analyzeRepoBtn = document.getElementById('analyze-repo-btn');
+    const modalRepoInput = document.getElementById('modal-repo-url');
+
+    // Open modal when engineer card is clicked
+    if (engineerCard && modal) {
+        engineerCard.addEventListener('click', () => {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+    }
+
+    // Close modal functions
+    const closeModalFunc = () => {
+        if (modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    };
+
+    if (closeModal) {
+        closeModal.addEventListener('click', closeModalFunc);
+    }
+
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', closeModalFunc);
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal?.classList.contains('active')) {
+            closeModalFunc();
+        }
+    });
+
+    // Handle Deploy Now button
+    if (deployBtn) {
+        deployBtn.addEventListener('click', () => {
+            showNotification('Redirecting to deployment page...', 'info');
+            setTimeout(() => {
+                window.location.href = 'analysis.html';
+            }, 500);
+        });
+    }
+
+    // Handle AI Deployment Analysis button
+    if (analyzeDeploymentBtn) {
+        analyzeDeploymentBtn.addEventListener('click', () => {
+            showNotification('Starting deployment analysis...', 'info');
+            setTimeout(() => {
+                window.location.href = 'analysis.html';
+            }, 500);
+        });
+    }
+
+    // Handle Read Documentation button
+    if (readDocsBtn) {
+        readDocsBtn.addEventListener('click', () => {
+            const repoUrl = modalRepoInput?.value.trim();
+            if (repoUrl) {
+                showNotification('Opening documentation...', 'info');
+                setTimeout(() => {
+                    // Extract owner/repo from URL
+                    const match = repoUrl.match(/github\.com\/([^\/]+\/[^\/]+)|^([^\/]+\/[^\/]+)$/);
+                    const repo = match ? (match[1] || match[2]) : repoUrl;
+                    window.open(`https://github.com/${repo}#readme`, '_blank');
+                }, 500);
+            } else {
+                showNotification('Please enter a repository URL', 'info');
+            }
+        });
+    }
+
+    // Handle Analyze Repository button
+    if (analyzeRepoBtn) {
+        analyzeRepoBtn.addEventListener('click', () => {
+            const repoUrl = modalRepoInput?.value.trim();
+            if (repoUrl) {
+                showNotification('Starting AI analysis...', 'info');
+                setTimeout(() => {
+                    window.location.href = `analysis.html?repo=${encodeURIComponent(repoUrl)}`;
+                }, 500);
+            } else {
+                showNotification('Please enter a repository URL', 'info');
+            }
+        });
+    }
+
+    // Handle Enter key in repo input
+    if (modalRepoInput) {
+        modalRepoInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                analyzeRepoBtn?.click();
+            }
+        });
+    }
+}
+
 
 // Initialize animations
 function initAnimations() {
@@ -178,13 +286,13 @@ function addClickHandlers() {
         });
     });
     
-    // Primary button
-    const primaryBtn = document.querySelector('.btn-primary');
-    if (primaryBtn) {
-        primaryBtn.addEventListener('click', () => {
+    // Primary buttons without their own navigation (skip hero "Start Analysis")
+    document.querySelectorAll('.btn-primary').forEach((btn) => {
+        if (btn.getAttribute('onclick')) return;
+        btn.addEventListener('click', () => {
             showNotification('Starting new analysis...', 'info');
         });
-    }
+    });
     
     // Analysis items
     const analysisItems = document.querySelectorAll('.analysis-item');

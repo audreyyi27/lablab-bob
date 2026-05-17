@@ -7,8 +7,8 @@
         {
             "type": "msedge",
             "request": "launch",
-            "name": "Open index.html",
-            "file": "/Users/danielamadeus/Projects/RepoTalk/index.html"
+            "name": "Open RepoTalk (localhost:3000)",
+            "url": "http://localhost:3000/analysis.html"
         }
     ]
 }
