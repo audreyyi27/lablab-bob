@@ -1,13 +1,12 @@
 (function () {
   const origin = window.location.origin;
-  const isServedByBackend =
-    window.location.port === '3000' ||
-    (window.location.port === '' && origin.includes('localhost'));
+  const isLocal =
+    origin.includes('localhost') || origin.includes('127.0.0.1');
 
   window.REPOTALK_API_BASE =
     typeof window.REPOTALK_API_BASE === 'string'
       ? window.REPOTALK_API_BASE.replace(/\/$/, '')
-      : isServedByBackend
-        ? ''
-        : 'http://localhost:3000';
+      : isLocal
+        ? 'http://localhost:3000'
+        : origin;  
 })();
