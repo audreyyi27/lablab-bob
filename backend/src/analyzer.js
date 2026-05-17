@@ -2,7 +2,11 @@
 // Analyzes repository structure, content, and generates audience-specific documentation
 
 import { githubFetch } from './github.js';
-import { generateDocumentWithAI } from './watsonx.js';
+import {
+  generateDocumentWithAI,
+  generateDocumentFromTemplate,
+  isWatsonxConfigured,
+} from './watsonx.js';
 
 /**
  * Identify important files in the repository
@@ -297,9 +301,24 @@ export async function analyzeRepository(accessToken, owner, repo, repoData, tree
 }
 
 /**
- * Generate document for a specific audience via IBM watsonx.ai Runtime / WML only.
- * Throws WatsonxError when watsonx is unavailable or generation fails.
+ * Generate audience-specific documentation.
+ * Uses watsonx.ai when WATSONX_API_KEY + WATSONX_PROJECT_ID are set;
+ * otherwise falls back to template mode (hackathon-friendly, no ML project needed).
  */
 export async function generateDocument(audience, analysisData) {
-  return generateDocumentWithAI(audience, analysisData);
+  if (isWatsonxConfigured()) {
+    try {
+      return await generateDocumentWithAI(audience, analysisData);
+    } catch (error) {
+      console.warn(
+        `[analyze] watsonx.ai failed (${error.message}), using template fallback`
+      );
+    }
+  } else {
+    console.log(
+      `[analyze] watsonx.ai not fully configured — generating document from templates for audience: ${audience}`
+    );
+  }
+
+  return generateDocumentFromTemplate(audience, analysisData);
 }

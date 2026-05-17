@@ -2,8 +2,6 @@ import { Router } from 'express';
 import { fetchRepoWithTree } from '../github.js';
 import { analyzeRepository, generateDocument } from '../analyzer.js';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { isWatsonxConfigured } from '../watsonx.js';
-
 const router = Router();
 
 const VALID_AUDIENCES = [
@@ -44,13 +42,6 @@ async function handleAnalyzeRequest(req, res, accessToken) {
   if (!VALID_AUDIENCES.includes(audience)) {
     return res.status(400).json({
       error: `Invalid audience. Must be one of: ${VALID_AUDIENCES.join(', ')}`,
-    });
-  }
-
-  if (!isWatsonxConfigured()) {
-    return res.status(503).json({
-      error:
-        'IBM watsonx.ai is not configured. Set WATSONX_API_KEY and WATSONX_PROJECT_ID in .env, then restart the server.',
     });
   }
 

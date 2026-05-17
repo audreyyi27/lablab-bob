@@ -591,25 +591,30 @@ async function loadOrchestrateConnection() {
         const data = await res.json();
         const conn = data?.connection || {};
 
-        let cls = 'orchestrate-status-unknown';
-        let text = 'watsonx Orchestrate: status unknown';
+        const vercel = data?.vercel || {};
+        const lines = [];
 
-        if (!conn.configured) {
-            cls = 'orchestrate-status-warn';
-            text = 'watsonx Orchestrate: not configured (running in local mode)';
-        } else if (conn.authenticated && conn.workflowAccessible) {
-            cls = 'orchestrate-status-ok';
-            text = `watsonx Orchestrate: connected (${conn.region || 'region ?'}/${(conn.instanceId || '').slice(0, 8)}…)`;
-        } else if (conn.authenticated) {
-            cls = 'orchestrate-status-warn';
-            text = `watsonx Orchestrate: authenticated, workspace role pending — ${conn.message || ''}`;
+        if (vercel.configured) {
+            lines.push(`✅ Vercel CD: ${vercel.message || 'ready — real deploys enabled'}`);
         } else {
-            cls = 'orchestrate-status-err';
-            text = `watsonx Orchestrate: ${conn.message || 'authentication failed'}`;
+            lines.push('⚠️ Vercel CD: set VERCEL_TOKEN in .env for real deploys');
         }
 
+        if (!conn.configured) {
+            lines.push('ℹ️ watsonx Orchestrate: optional (not required for Vercel deploy)');
+        } else if (conn.authenticated && conn.workflowAccessible) {
+            lines.push(`✅ watsonx Orchestrate: connected (${conn.region || '?'})`);
+        } else if (conn.authenticated) {
+            lines.push(
+                `⚠️ Orchestrate: authenticated, no workspace role — Vercel deploy still works. ${(conn.message || '').slice(0, 120)}`
+            );
+        } else {
+            lines.push(`⚠️ Orchestrate: ${conn.message || 'not reachable'}`);
+        }
+
+        const cls = vercel.configured ? 'orchestrate-status-ok' : 'orchestrate-status-warn';
         badge.className = `orchestrate-connection ${cls}`;
-        badge.querySelector('.text').textContent = text;
+        badge.querySelector('.text').textContent = lines.join(' · ');
     } catch (err) {
         badge.className = 'orchestrate-connection orchestrate-status-err';
         badge.querySelector('.text').textContent = `watsonx Orchestrate: ${err.message}`;
@@ -746,11 +751,16 @@ function deploymentUrlBlock(deployment) {
         const inspector = deployment.inspectorUrl
             ? `<a href="${escapeHtmlAttr(deployment.inspectorUrl)}" target="_blank" rel="noopener" class="deployment-inspector">Inspect on Vercel ↗</a>`
             : '';
+        const siteWarn =
+            deployment.isPublic === false
+                ? `<p class="deployment-site-warn">⚠️ Vercel built successfully but this URL serves nothing (NOT_FOUND). RepoTalk will retry with a different root directory when possible — or set Root Directory in the Vercel inspector and redeploy.</p>`
+                : '';
         return `
             <div class="deployment-url-block">
                 <span class="deployment-url-label">Production</span>
                 <a href="${safeUrl}" target="_blank" rel="noopener" class="deployment-url-link">${safeUrl}</a>
                 ${inspector}
+                ${siteWarn}
             </div>
         `;
     }
@@ -857,8 +867,13 @@ function handleDeploymentStatusUpdate(event) {
         progressSlot.innerHTML = deploymentProgressBlock(status);
     }
 
-    // Auto-redirect to production once the deploy is READY.
-    if (status.status === 'completed' && status.url && !redirectedDeployments.has(executionId)) {
+    // Auto-redirect only when the live URL actually serves content.
+    if (
+        status.status === 'completed' &&
+        status.url &&
+        status.isPublic !== false &&
+        !redirectedDeployments.has(executionId)
+    ) {
         redirectedDeployments.add(executionId);
         showSuccess(`Deployment ready → opening ${status.url}`);
         try {
@@ -872,13 +887,20 @@ function handleDeploymentStatusUpdate(event) {
         }
     }
 
-    if (status.status === 'completed' || status.status === 'failed' || status.status === 'cancelled') {
+    if (status.status === 'failed' || status.status === 'cancelled') {
         setTimeout(() => {
             deploymentCard.remove();
             if (currentRepoForDeployment) {
                 loadDeploymentHistory(currentRepoForDeployment.owner, currentRepoForDeployment.repo);
             }
         }, 3000);
+    } else if (status.status === 'completed') {
+        if (currentRepoForDeployment) {
+            loadDeploymentHistory(currentRepoForDeployment.owner, currentRepoForDeployment.repo);
+        }
+        if (status.isPublic === false) {
+            showError('Deploy finished on Vercel but the public URL is not reachable (404). Check build output and root directory, then redeploy.');
+        }
     }
 }
 

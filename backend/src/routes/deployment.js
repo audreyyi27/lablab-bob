@@ -2,6 +2,7 @@ import express from 'express';
 import { watsonxClient } from '../watsonx.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { githubFetch } from '../github.js';
+import { isVercelConfigured } from '../vercel.js';
 
 const router = express.Router();
 
@@ -12,7 +13,17 @@ const router = express.Router();
 router.get('/connection', async (_req, res) => {
   try {
     const status = await watsonxClient.verifyConnection();
-    res.json({ success: true, connection: status });
+    const vercelReady = isVercelConfigured();
+    res.json({
+      success: true,
+      connection: status,
+      vercel: {
+        configured: vercelReady,
+        message: vercelReady
+          ? 'Vercel CD active — deploys run via GitHub (your repos) or tarball upload (any public repo). Does not require Orchestrate workspace role.'
+          : 'Set VERCEL_TOKEN in .env to enable real deployments.',
+      },
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -26,7 +37,7 @@ router.get('/connection', async (_req, res) => {
  * Trigger a deployment for a repository
  * POST /api/deployment/trigger
  */
-router.post('/trigger', requireAuth, async (req, res) => {
+router.post('/trigger', async (req, res) => {
   try {
     const { owner, repo, branch, environment, deploymentType } = req.body;
 
@@ -34,15 +45,11 @@ router.post('/trigger', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Owner and repo are required' });
     }
 
-    // Best-effort lookup of the default branch from GitHub.
-    // If this fails (404, private repo, no token, rate limit) we still
-    // proceed so Watsonx Orchestrate can execute the deployment.
+    const ghToken = req.session?.githubAccessToken || null;
+
     let defaultBranch = null;
     try {
-      const repoData = await githubFetch(
-        `/repos/${owner}/${repo}`,
-        req.session.accessToken
-      );
+      const repoData = await githubFetch(`/repos/${owner}/${repo}`, ghToken);
       defaultBranch = repoData?.default_branch || null;
     } catch (err) {
       console.warn(
@@ -59,8 +66,8 @@ router.post('/trigger', requireAuth, async (req, res) => {
       branch: resolvedBranch,
       environment: resolvedEnv,
       deploymentType: deploymentType || 'auto',
-      triggeredBy: req.session.user?.login || 'engineer',
-      accessToken: req.session.accessToken || null,
+      triggeredBy: req.session?.user?.login || 'engineer',
+      accessToken: ghToken,
     });
 
     res.json({
@@ -74,7 +81,11 @@ router.post('/trigger', requireAuth, async (req, res) => {
         triggeredAt: new Date().toISOString(),
         triggeredBy: req.session.user?.login || 'engineer',
         provider: deployment.provider || 'simulated',
-        url: deployment.url || null,
+        deployMethod: deployment.deployMethod || null,
+        url: deployment.publicUrl || deployment.url || null,
+        publicUrl: deployment.publicUrl || deployment.url || null,
+        isPublic: deployment.isPublic ?? false,
+        siteHealthy: deployment.siteHealthy ?? null,
         inspectorUrl: deployment.inspectorUrl || null,
         project: deployment.project || null,
         orchestrate: deployment.orchestrate || null,
@@ -93,7 +104,7 @@ router.post('/trigger', requireAuth, async (req, res) => {
  * Get deployment status
  * GET /api/deployment/status/:executionId
  */
-router.get('/status/:executionId', requireAuth, async (req, res) => {
+router.get('/status/:executionId', async (req, res) => {
   try {
     const { executionId } = req.params;
 
@@ -110,7 +121,10 @@ router.get('/status/:executionId', requireAuth, async (req, res) => {
         logs: (status.logs || []).slice(-30),
         result: status.result,
         provider: status.provider || 'simulated',
-        url: status.url || null,
+        url: status.publicUrl || status.url || null,
+        publicUrl: status.publicUrl || status.url || null,
+        isPublic: status.isPublic ?? null,
+        siteHealthy: status.siteHealthy ?? null,
         inspectorUrl: status.inspectorUrl || null,
         project: status.project || null,
         attempts: status.attempts || null,

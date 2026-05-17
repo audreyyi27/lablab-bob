@@ -188,3 +188,77 @@ export function proposeFix({ errorText = '', tree, project = {}, triedFixes = ne
 
   return null;
 }
+
+/**
+ * Build succeeded but the live URL returns Vercel NOT_FOUND (no servable app).
+ * Uses the repo tree to pick rootDirectory / static vs framework settings.
+ */
+export function proposeSiteReachabilityFix({
+  tree,
+  project = {},
+  triedFixes = new Set(),
+}) {
+  const currentRoot = project.rootDirectory || '';
+
+  if (tree) {
+    const indexDir = findShallowestDirContaining(tree, 'index.html');
+    if (
+      indexDir !== null &&
+      indexDir !== currentRoot &&
+      !triedFixes.has('site-root-index-html')
+    ) {
+      const patch = { rootDirectory: indexDir || null };
+      if (!hasPackageJsonAt(tree, indexDir)) {
+        Object.assign(patch, {
+          framework: null,
+          buildCommand: '',
+          installCommand: '',
+          outputDirectory: '',
+        });
+      }
+      return {
+        kind: 'site-root-index-html',
+        patch,
+        message: `Live URL is empty — point Vercel rootDirectory to "${indexDir || '/'}" where index.html lives.`,
+      };
+    }
+
+    const pkgDir = findShallowestDirContaining(tree, 'package.json');
+    if (
+      pkgDir !== null &&
+      pkgDir !== currentRoot &&
+      !triedFixes.has('site-root-package-json')
+    ) {
+      return {
+        kind: 'site-root-package-json',
+        patch: { rootDirectory: pkgDir || null },
+        message: `Live URL is empty — point Vercel rootDirectory to "${pkgDir || '/'}" where package.json lives.`,
+      };
+    }
+  }
+
+  const guesses = ['frontend', 'client', 'app', 'web', 'src', 'public', 'site', 'dist'];
+  for (const dir of guesses) {
+    const kind = `site-guess-root-${dir}`;
+    if (triedFixes.has(kind) || currentRoot === dir) continue;
+    if (tree) {
+      const hasEntry =
+        paths(tree).includes(`${dir}/index.html`) ||
+        paths(tree).includes(`${dir}/package.json`);
+      if (!hasEntry) continue;
+    }
+    return {
+      kind,
+      patch: {
+        rootDirectory: dir,
+        framework: null,
+        buildCommand: '',
+        installCommand: '',
+        outputDirectory: '',
+      },
+      message: `Live URL is empty — trying rootDirectory="${dir}" as a static site.`,
+    };
+  }
+
+  return null;
+}

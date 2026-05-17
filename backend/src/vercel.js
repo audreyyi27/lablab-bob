@@ -12,8 +12,17 @@
 //   4. Poll until READY / ERROR / CANCELED and surface the production URL.
 
 import { config } from './config.js';
+import { t as tarList } from 'tar';
+import { Readable } from 'node:stream';
+import { createHash } from 'node:crypto';
 
 const VERCEL_API = 'https://api.vercel.com';
+
+const TARBALL_MAX_FILES = 4000;
+const TARBALL_MAX_TOTAL_BYTES = 200 * 1024 * 1024;
+const TARBALL_MAX_FILE_BYTES = 25 * 1024 * 1024;
+const TARBALL_SKIP_RE =
+  /(?:^|\/)(?:node_modules|\.git|\.next|\.turbo|\.cache|\.vercel|coverage|dist|build|out|target|venv|__pycache__)(?:\/|$)/;
 
 export function isVercelConfigured() {
   return Boolean(config.vercel.token);
@@ -121,8 +130,21 @@ async function createProject(name, owner, repo) {
     body: JSON.stringify({
       name,
       gitRepository: { type: 'github', repo: `${owner}/${repo}` },
+      ssoProtection: null,
     }),
   });
+}
+
+export async function ensurePublicAccess(projectIdOrName) {
+  try {
+    return await updateProject(projectIdOrName, {
+      ssoProtection: null,
+      passwordProtection: null,
+    });
+  } catch (err) {
+    if (err.status === 404) return null;
+    throw err;
+  }
 }
 
 async function getOrCreateProject(projectName, owner, repo) {
@@ -294,10 +316,24 @@ export function mapState(readyState) {
 }
 
 export function productionUrl(deployment, project) {
-  // Prefer the project's stable production alias if present.
-  const alias = project?.alias?.find?.((a) => a.domain)?.domain;
-  if (alias) return `https://${alias}`;
-  if (deployment?.url) return `https://${deployment.url}`;
+  const aliases = project?.alias;
+  if (Array.isArray(aliases) && aliases.length) {
+    const first = aliases[0];
+    const domain = typeof first === 'string' ? first : first?.domain;
+    if (domain) return `https://${domain}`;
+  }
+
+  if (project?.name) {
+    return `https://${project.name}.vercel.app`;
+  }
+
+  if (deployment?.url) {
+    const host = deployment.url.startsWith('http')
+      ? deployment.url.replace(/^https?:\/\//, '')
+      : deployment.url;
+    return `https://${host}`;
+  }
+
   return null;
 }
 
@@ -311,4 +347,218 @@ export function inspectorUrl(deployment) {
 
 export function deploymentId(deployment) {
   return deployment?.id || deployment?.uid || null;
+}
+
+async function fetchRepoFiles({ owner, repo, ref, accessToken }) {
+  const url = `https://api.github.com/repos/${owner}/${repo}/tarball/${encodeURIComponent(ref)}`;
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'RepoTalk',
+  };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+  console.log(`[vercel-tarball] downloading ${owner}/${repo}@${ref} from GitHub…`);
+  const ghRes = await fetch(url, { headers, redirect: 'follow' });
+  if (!ghRes.ok) {
+    throw new Error(
+      `GitHub tarball fetch failed: ${ghRes.status} ${ghRes.statusText}`
+    );
+  }
+
+  const files = [];
+  let totalBytes = 0;
+  let scanned = 0;
+  let skipped = 0;
+
+  await new Promise((resolve, reject) => {
+    const parser = tarList();
+    const stop = (err) => {
+      try { parser.end?.(); } catch (_) { /* noop */ }
+      reject(err);
+    };
+
+    parser.on('entry', (entry) => {
+      if (entry.type !== 'File') {
+        entry.resume();
+        return;
+      }
+      const relPath = entry.path.replace(/^[^/]+\//, '');
+      scanned++;
+      if (!relPath || TARBALL_SKIP_RE.test(relPath)) {
+        skipped++;
+        entry.resume();
+        return;
+      }
+      if (Number(entry.size) > TARBALL_MAX_FILE_BYTES) {
+        skipped++;
+        entry.resume();
+        return;
+      }
+
+      const chunks = [];
+      entry.on('data', (c) => chunks.push(c));
+      entry.on('end', () => {
+        const data = Buffer.concat(chunks);
+        totalBytes += data.length;
+        files.push({
+          file: relPath,
+          sha: createHash('sha1').update(data).digest('hex'),
+          size: data.length,
+          data,
+        });
+
+        if (files.length > TARBALL_MAX_FILES) {
+          stop(
+            new Error(
+              `Repo too large: more than ${TARBALL_MAX_FILES} deployable files.`
+            )
+          );
+          return;
+        }
+        if (totalBytes > TARBALL_MAX_TOTAL_BYTES) {
+          stop(
+            new Error(
+              `Repo too large: exceeds ${TARBALL_MAX_TOTAL_BYTES / 1024 / 1024} MB.`
+            )
+          );
+        }
+      });
+    });
+    parser.on('end', resolve);
+    parser.on('error', stop);
+    Readable.fromWeb(ghRes.body).on('error', stop).pipe(parser);
+  });
+
+  if (!files.length) throw new Error('No files extracted from GitHub tarball');
+  console.log(
+    `[vercel-tarball] extraction done: ${files.length} kept, ${skipped} skipped, ${(totalBytes / 1024 / 1024).toFixed(1)} MB`
+  );
+  return files;
+}
+
+async function uploadFileToVercel(fileEntry) {
+  const res = await fetch(`${VERCEL_API}/v2/files${teamParam('?')}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.vercel.token}`,
+      'Content-Type': 'application/octet-stream',
+      'x-vercel-digest': fileEntry.sha,
+    },
+    body: fileEntry.data,
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Vercel file upload failed (${res.status}): ${txt.slice(0, 300)}`);
+  }
+}
+
+/**
+ * Deploy without the Vercel GitHub app — pull source from GitHub tarball API.
+ */
+export async function deployFromTarball({
+  owner,
+  repo,
+  branch,
+  projectName,
+  accessToken,
+  target = 'production',
+}) {
+  if (!isVercelConfigured()) {
+    throw new Error('Vercel is not configured. Set VERCEL_TOKEN in .env.');
+  }
+
+  const slug = slugify(projectName || `${owner}-${repo}`);
+  const ref = branch || 'main';
+  const files = await fetchRepoFiles({ owner, repo, ref, accessToken });
+
+  let project = await findProject(slug);
+  if (!project) {
+    project = await vfetch(`/v10/projects${teamParam('?')}`, {
+      method: 'POST',
+      body: JSON.stringify({ name: slug, ssoProtection: null }),
+    });
+  }
+  await ensurePublicAccess(project.name).catch(() => {});
+
+  console.log(`[vercel-tarball] uploading ${files.length} files…`);
+  const concurrency = 16;
+  for (let i = 0; i < files.length; i += concurrency) {
+    await Promise.all(files.slice(i, i + concurrency).map(uploadFileToVercel));
+  }
+
+  const deployment = await vfetch(
+    `/v13/deployments${appendTeam('?forceNew=1&skipAutoDetectionConfirmation=1')}`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        name: project.name,
+        project: project.id,
+        target,
+        files: files.map((f) => ({ file: f.file, sha: f.sha, size: f.size })),
+        projectSettings: { framework: null },
+      }),
+    }
+  );
+
+  return {
+    deployment,
+    project,
+    repoInfo: { repoId: null, defaultBranch: ref, namespace: owner, repo },
+  };
+}
+
+export async function resolvePublicUrl(projectName, deployment = null) {
+  let project;
+  try {
+    project = await getProject(projectName);
+  } catch (err) {
+    if (err.status === 404) {
+      return {
+        publicUrl: null,
+        url: null,
+        isPublic: false,
+        notFound: true,
+      };
+    }
+    throw err;
+  }
+
+  await ensurePublicAccess(projectName).catch(() => {});
+
+  const deploymentHost = deployment?.url
+    ? (deployment.url.startsWith('http') ? deployment.url : `https://${deployment.url}`)
+    : null;
+  const stableUrl = productionUrl(deployment, project);
+  const candidates = [...new Set([stableUrl, deploymentHost].filter(Boolean))];
+
+  let publicUrl = null;
+  let isPublic = false;
+
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(candidate, {
+        method: 'GET',
+        redirect: 'follow',
+        headers: { 'User-Agent': 'RepoTalk-PublicCheck/1.0' },
+      });
+      const bodySnippet = (await response.text()).slice(0, 200);
+      const authWall =
+        response.status === 401 ||
+        /Authentication Required|vercel\.com\/login/i.test(bodySnippet);
+      if (!authWall && response.status >= 200 && response.status < 400) {
+        publicUrl = candidate;
+        isPublic = true;
+        break;
+      }
+    } catch {
+      /* try next */
+    }
+  }
+
+  return {
+    publicUrl: publicUrl || stableUrl || deploymentHost,
+    url: stableUrl || deploymentHost,
+    isPublic,
+    notFound: false,
+  };
 }

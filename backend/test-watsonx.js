@@ -40,9 +40,9 @@ console.log();
 // Test 4: watsonx.ai SDK
 console.log('4. watsonx.ai SDK Check:');
 try {
-  const WatsonXAI = (await import('@ibm-cloud/watsonx-ai')).default;
+  const { WatsonXAI } = await import('@ibm-cloud/watsonx-ai');
   console.log('   ✓ @ibm-cloud/watsonx-ai SDK imported successfully');
-  console.log('   ✓ SDK version:', WatsonXAI.version || 'unknown');
+  console.log('   ✓ WatsonXAI.newInstance:', typeof WatsonXAI?.newInstance === 'function' ? 'available' : 'missing');
 } catch (error) {
   console.log('   ✗ Error importing watsonx.ai SDK:', error.message);
 }
@@ -51,15 +51,14 @@ console.log();
 // Summary
 console.log('=== Test Summary ===');
 if (isWatsonxConfigured()) {
-  console.log('✓ watsonx.ai is configured and ready to use');
-  console.log('  Documents are generated only via IBM watsonx.ai Runtime / WML');
+  console.log('✓ watsonx.ai ML is configured — documents will use IBM watsonx.ai');
+  console.log('  (template fallback still applies if the API call fails)');
 } else {
-  console.log('✗ watsonx.ai is not configured — document generation will fail until configured');
-  console.log('  Set these environment variables in .env:');
-  console.log('    - WATSONX_API_KEY');
-  console.log('    - WATSONX_PROJECT_ID');
-  console.log('    - WATSONX_REGION (optional, defaults to us-south)');
-  console.log('    - WATSONX_MODEL_ID (optional, defaults to ibm/granite-13b-chat-v2)');
+  console.log('✓ Template mode — document generation works WITHOUT WATSONX_PROJECT_ID');
+  console.log('  Optional: add WATSONX_PROJECT_ID to .env for full AI-generated docs');
+  if (config.watsonx.apiKey) {
+    console.log('  (WATSONX_API_KEY is set — Orchestrate/CD can still use it)');
+  }
 }
 console.log();
 console.log('For detailed setup instructions, see WATSONX_INTEGRATION.md');
